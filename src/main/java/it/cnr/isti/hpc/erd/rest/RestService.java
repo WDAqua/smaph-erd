@@ -140,7 +140,7 @@ public class RestService {
 				JSONObject annJson = new JSONObject();
 			annJson.put("wid", wid);
 			annJson.put("title", title);
-			annJson.put("url", "http://en.wikipedia.org/wiki/"+URLEncoder.encode(title.replace(" ", "%20"), "utf8"));
+			annJson.put("url", "http://en.wikipedia.org/wiki/"+URLEncoder.encode(title, "utf8").replace("+", "%20"));
 			annotJson.put(annJson);
 			}
 		}
