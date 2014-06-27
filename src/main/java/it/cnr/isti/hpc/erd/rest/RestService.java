@@ -16,9 +16,21 @@
 
 package it.cnr.isti.hpc.erd.rest;
 
+import it.acubelab.batframework.data.ScoredAnnotation;
+import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.acubelab.erd.BingAnnotator;
+import it.acubelab.erd.SmaphConfig;
+import it.acubelab.erd.emptyqueryfilters.NoEmptyQueryFilter;
+import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
+import it.acubelab.erd.spotfilters.EditDistanceSpotFilter;
+import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
 import it.cnr.isti.hpc.erd.Annotation;
 import it.cnr.isti.hpc.erd.Annotator;
+import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -28,6 +40,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
 import com.sun.jersey.multipart.FormDataParam;
 
@@ -73,7 +89,65 @@ public class RestService {
 		}
 		return sb.toString();
 	}
-	
-	
+
+	@GET
+	@Path("/default")
+	@Produces({ MediaType.APPLICATION_JSON })
+	public String annotateGetFull(@QueryParam("Text") String text) {
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		String bingKey = SmaphConfig.getDefaultBingKey();
+		WikipediaApiInterface wikiApi;
+		try {
+			wikiApi = new WikipediaApiInterface("wid.cache", "redirect.cache");
+		} catch (ClassNotFoundException | IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		String modelBase = "models/model_1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25_3.80000_6.00000_0.700_0.03000000_5.00000000_ANW";
+		WikiSenseAnnotatorDevelopment auxAnnotatorService = new WikiSenseAnnotatorDevelopment(
+				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
+				"0", false, false, false);
+
+		BingAnnotator ann = null;
+		try {
+			ann = new BingAnnotator(auxAnnotatorService,
+					new EditDistanceSpotFilter(0.7), new LibSvmEntityFilter(
+							modelBase), new NoEmptyQueryFilter(), true, true,
+					true, 10, false, -1, false, -1, wikiApi, bingKey);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		HashSet<ScoredAnnotation> annotations = ann.solveSa2W(text);
+
+		return encodeJsonResponse(annotations, wikiApi);
+	}
+
+	private String encodeJsonResponse(HashSet<ScoredAnnotation> annotations, WikipediaApiInterface wikiApi) {
+		JSONObject res = new JSONObject();
+		
+		try {
+		res.put("response-code", "OK");
+		
+		JSONArray annotJson = new JSONArray();
+		for (ScoredAnnotation ann : annotations){
+			int wid = ann.getConcept();
+			String title = wikiApi.getTitlebyId(ann.getConcept());
+			if (wid >=0 && title != null){
+				JSONObject annJson = new JSONObject();
+			annJson.put("wid", wid);
+			annJson.put("title", title);
+			annotJson.put(annJson);
+			}
+		}
+		res.put("annotations", annotJson);
+		} catch (JSONException |IOException e){
+			throw new RuntimeException(e);
+		}
+		
+		return res.toString();
+	}
 
 }

@@ -69,7 +69,6 @@ public class BingAnnotator implements Sa2WSystem {
 	private static String resultsCacheFilename;
 	private static int flushCounter = 0;
 	private WikipediaApiInterface wikiApi;
-	private WikipediaToFreebase wikiToFreeb;
 
 	private WikiSenseAnnotatorDevelopment auxDisambiguator;
 	private SpotFilter boldFilter;
@@ -85,11 +84,10 @@ public class BingAnnotator implements Sa2WSystem {
 	private int topKRelatedSearch;
 
 	public BingAnnotator(WikiSenseAnnotatorDevelopment auxDisambiguator,
-			SpotFilter spotManager, WikipediaApiInterface wikiApi,
-			WikipediaToFreebase wikiToFreeb, String bingKey) {
+			SpotFilter spotManager, WikipediaApiInterface wikiApi, String bingKey) {
 		this(auxDisambiguator, spotManager, new NoEntityFilter(),
 				new NoEmptyQueryFilter(), true, false, false, 0, false, 0,
-				false, 0, wikiApi, wikiToFreeb, bingKey);
+				false, 0, wikiApi, bingKey);
 	}
 
 	public BingAnnotator(WikiSenseAnnotatorDevelopment auxDisambiguator,
@@ -98,13 +96,11 @@ public class BingAnnotator implements Sa2WSystem {
 			boolean includeSourceNormalSearch, boolean includeSourceWikiSearch,
 			int wikiSearchPages, boolean includeSourceAnnotatorTopK,
 			int topKAnnotatorCandidates, boolean includeRelatedSearch,
-			int topKRelatedSearch, WikipediaApiInterface wikiApi,
-			WikipediaToFreebase wikiToFreeb, String bingKey) {
+			int topKRelatedSearch, WikipediaApiInterface wikiApi, String bingKey) {
 		this.auxDisambiguator = auxDisambiguator;
 		this.boldFilter = spotManager;
 		this.entityFilter = entityFilter;
 		this.wikiApi = wikiApi;
-		this.wikiToFreeb = wikiToFreeb;
 		this.emptyQueryFilter = emptyQueryFilter;
 		this.includeSourceAnnotator = includeSourceAnnotator;
 		this.includeSourceNormalSearch = includeSourceNormalSearch;
@@ -881,7 +877,7 @@ public class BingAnnotator implements Sa2WSystem {
 	public void generateExamples(String query, HashSet<Tag> goldStandard,
 			Vector<double[]> posEFVectors, Vector<double[]> negEFVectors,
 			Vector<double[]> posEQFVectors, Vector<double[]> negEQFVectors,
-			boolean discardNE) throws Exception {
+			boolean discardNE, WikipediaToFreebase wikiToFreeb) throws Exception {
 
 		/** Search the query on bing */
 		List<Pair<String, Integer>> bingBoldsAndRank = null;

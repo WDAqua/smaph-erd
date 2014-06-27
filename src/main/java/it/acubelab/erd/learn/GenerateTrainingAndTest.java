@@ -32,7 +32,7 @@ public class GenerateTrainingAndTest {
 
 	public static void gatherExamples(BingAnnotator bingAnnotator,
 			C2WDataset ds, BinaryExampleGatherer entityFilterGatherer,
-			BinaryExampleGatherer emptyQueryGatherer) throws Exception {
+			BinaryExampleGatherer emptyQueryGatherer, WikipediaToFreebase wikiToFreeb) throws Exception {
 		for (int i = 0; i < ds.getSize(); i++) {
 			String query = ds.getTextInstanceList().get(i);
 			HashSet<Tag> goldStandard = ds.getC2WGoldStandardList().get(i);
@@ -41,7 +41,7 @@ public class GenerateTrainingAndTest {
 			Vector<double[]> posEF = new Vector<>();
 			Vector<double[]> negEF = new Vector<>();
 			bingAnnotator.generateExamples(query, goldStandard, posEF, negEF,
-					posEQF, negEQF, true);
+					posEQF, negEQF, true, wikiToFreeb);
 			if (entityFilterGatherer != null)
 				entityFilterGatherer.addExample(posEF, negEF);
 			if (emptyQueryGatherer != null)
@@ -64,7 +64,7 @@ public class GenerateTrainingAndTest {
 						"datasets/smaph/smaph_training.xml", wikiApi), wikiApi,
 						wikiToFreebase);
 				gatherExamples(bingAnnotator, smaphTrain,
-						trainEntityFilterGatherer, trainEmptyQueryGatherer);
+						trainEntityFilterGatherer, trainEmptyQueryGatherer, wikiToFreebase);
 			}
 			
 			{
@@ -72,14 +72,14 @@ public class GenerateTrainingAndTest {
 						"datasets/smaph/smaph_test.xml", wikiApi), wikiApi,
 						wikiToFreebase);
 				gatherExamples(bingAnnotator, smaphTest,
-						trainEntityFilterGatherer, trainEmptyQueryGatherer);
+						trainEntityFilterGatherer, trainEmptyQueryGatherer, wikiToFreebase);
 			}
 			{
 				C2WDataset smaphDevel = new ERDDatasetFilter(new SMAPHDataset(
 						"datasets/smaph/smaph_devel.xml", wikiApi), wikiApi,
 						wikiToFreebase);
 				gatherExamples(bingAnnotator, smaphDevel,
-						trainEntityFilterGatherer, trainEmptyQueryGatherer);
+						trainEntityFilterGatherer, trainEmptyQueryGatherer, wikiToFreebase);
 			}
 			{
 				C2WDataset yahoo = new ERDDatasetFilter(
@@ -88,7 +88,7 @@ public class GenerateTrainingAndTest {
 						wikiApi, wikiToFreebase);
 				;
 				gatherExamples(bingAnnotator, yahoo, trainEntityFilterGatherer,
-						trainEmptyQueryGatherer);
+						trainEmptyQueryGatherer, wikiToFreebase);
 			}
 		}
 		if (develEntityFilterGatherer != null
@@ -104,7 +104,7 @@ public class GenerateTrainingAndTest {
 				System.out.println(t.getConcept());
 
 			gatherExamples(bingAnnotator, develDs, develEntityFilterGatherer,
-					develEmptyQueryGatherer);
+					develEmptyQueryGatherer, wikiToFreebase);
 		}
 
 		BingAnnotator.flush();
@@ -123,7 +123,7 @@ public class GenerateTrainingAndTest {
 		BingAnnotator bingAnnotator = new BingAnnotator(wikiSense,
 				new EditDistanceSpotFilter(editDistanceSpotFilterThreshold), new NoEntityFilter(),
 				new NoEmptyQueryFilter(), true, true, true, wikiSearchTopK, false, 0, false, 0, 
-				wikiApi, wikiToFreebase, bingKey);
+				wikiApi, bingKey);
 
 		return bingAnnotator;
 	}

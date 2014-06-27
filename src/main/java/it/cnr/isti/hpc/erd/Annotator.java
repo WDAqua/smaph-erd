@@ -68,7 +68,7 @@ public class Annotator {
 		if (bingAnnotator == null) {
 			try {
 				bingAnnotator = new BingAnnotator(wikiSense,
-						new FrequencySpotFilter(7), wikiApi, wikiToFreeb,
+						new FrequencySpotFilter(7), wikiApi,
 						bingKey);
 				/* BingAnnotator.setCache("bing.cache"); */
 			} catch (Exception e) {
@@ -511,7 +511,7 @@ public class Annotator {
 							includeSourceAnnotatorCandidates,
 							topKannotatorCandidates,
 							includeSourceRelatedSearch, topKRelatedSearch,
-							wikiApi, wikiToFreeb, bingKey));
+							wikiApi, bingKey));
 
 			/*
 			 * if (!res.isEmpty()){ /////////////////////////////////////////
