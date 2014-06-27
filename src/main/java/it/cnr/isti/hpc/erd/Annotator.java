@@ -22,6 +22,7 @@ import it.acubelab.batframework.systemPlugins.TagmeAnnotator;
 import it.acubelab.batframework.utils.*;
 import it.acubelab.batframework.data.MultipleAnnotation;
 import it.acubelab.erd.BingAnnotator;
+import it.acubelab.erd.SmaphConfig;
 import it.acubelab.erd.emptyqueryfilters.*;
 import it.acubelab.erd.entityfilters.*;
 import it.acubelab.erd.learn.GenerateModel;
@@ -30,25 +31,21 @@ import it.acubelab.erd.spotfilters.*;
 import java.io.*;
 import java.util.*;
 
-
-
-/**
- * @author Diego Ceccarelli <diego.ceccarelli@isti.cnr.it>
- * 
- *         Created on Mar 15, 2014
- */
 public class Annotator {
 	public static final String SMAPH_PARAMS_FORMAT = "BING-auxAnnotator=%s&minLp=%.5f&sortBy=%s&method=%s&relatedness=%s&epsilon=%.5f&spotFilter=%s&spotFilterThreshold=%f&entityFilter=%s&svmEntityFilterModelBase=%s&emptyQueryFilter=%s&svmEmptyQueryFilterModelBase=%s&entitySources=%s";
 	private static WikipediaApiInterface wikiApi = null;
 	private static WikipediaToFreebase wikiToFreeb = null;
-	private static BingAnnotator bingAnnotator = null;
+	private static BingAnnotator bingAnnotator;
 	private static WikiSenseAnnotatorDevelopment wikiSense = null;
 	private static TagmeAnnotator tagme = null;
 	private static LibSvmEntityFilter libSvmEntityFilter = null;
 	private static LibSvmEmptyQueryFilter libSvmEmptyQueryFilter = null;
-	private static String bingKey = null;
-	
+	private String bingKey;
+
 	public Annotator() {
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		bingKey = SmaphConfig.getDefaultBingKey();
+		
 		try {
 			if (wikiApi == null)
 				wikiApi = new WikipediaApiInterface("wid.cache",
@@ -71,8 +68,9 @@ public class Annotator {
 		if (bingAnnotator == null) {
 			try {
 				bingAnnotator = new BingAnnotator(wikiSense,
-						new FrequencySpotFilter(7), wikiApi, wikiToFreeb, bingKey);
-				/*BingAnnotator.setCache("bing.cache");*/
+						new FrequencySpotFilter(7), wikiApi, wikiToFreeb,
+						bingKey);
+				/* BingAnnotator.setCache("bing.cache"); */
 			} catch (Exception e) {
 				e.printStackTrace();
 				throw new RuntimeException(e);
@@ -132,7 +130,7 @@ public class Annotator {
 				throw new RuntimeException(e);
 			}
 			String mid = wikiToFreeb.getFreebaseId(title);
-			annToTitle.put(a,title);
+			annToTitle.put(a, title);
 			System.out.printf("Annotation: wid=%d mid=%s title=%s%n", wid, mid,
 					title);
 			if (mid == null)
@@ -146,30 +144,22 @@ public class Annotator {
 			a.setScore(ann.getScore());
 			annotations.add(a);
 		}
-		
-/*		*//** Filter included titles *//*
-		List<Annotation> filteredAnnotations= new Vector<>();
-			for (Annotation a : annotations) {
-				String titleA = annToTitle.get(a);
-				if (titleA == null) continue;
-				titleA = titleA.toLowerCase().replace(BingAnnotator.WIKITITLE_ENDPAR_REGEX, "");
-				boolean collision = false;
-				for (Annotation b : annotations) {
-					if (a==b) continue;
-					String titleB = annToTitle.get(b);
-					if (titleB == null) continue;
-					titleB = titleB.toLowerCase().replace(BingAnnotator.WIKITITLE_ENDPAR_REGEX, "");
-					if (titleB.indexOf(titleA) >=0){
-						collision = true;
-						System.out.printf("Discarding %s overlapping with %s.%n", annToTitle.get(a), annToTitle.get(b));
-						break;
-					}
-				}
-				if (!collision)
-					filteredAnnotations.add(a);
-			}
-		return filteredAnnotations;
-*/		
+
+		/*		*//** Filter included titles */
+		/*
+		 * List<Annotation> filteredAnnotations= new Vector<>(); for (Annotation
+		 * a : annotations) { String titleA = annToTitle.get(a); if (titleA ==
+		 * null) continue; titleA =
+		 * titleA.toLowerCase().replace(BingAnnotator.WIKITITLE_ENDPAR_REGEX,
+		 * ""); boolean collision = false; for (Annotation b : annotations) { if
+		 * (a==b) continue; String titleB = annToTitle.get(b); if (titleB ==
+		 * null) continue; titleB =
+		 * titleB.toLowerCase().replace(BingAnnotator.WIKITITLE_ENDPAR_REGEX,
+		 * ""); if (titleB.indexOf(titleA) >=0){ collision = true;
+		 * System.out.printf("Discarding %s overlapping with %s.%n",
+		 * annToTitle.get(a), annToTitle.get(b)); break; } } if (!collision)
+		 * filteredAnnotations.add(a); } return filteredAnnotations;
+		 */
 
 		return annotations;
 	}
@@ -239,31 +229,32 @@ public class Annotator {
 	}
 
 	public List<Annotation> annotate(String runId, String textID, String text) {
-		try{
 		if (runId.startsWith("miao")) {
 			String modelFileEF = GenerateModel.getModelFileNameBaseEF(
-					new Integer[]{1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25},
-					 3.8, 6.0, 0.7,0.03,5.0)+"_"+"ANW";
-			
-			runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense",
-					0.0, "PAGERANK", "base", "jaccard", 0.6f,
-					"EditDistanceSpotFilter", 0.7,
-					"SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",
-					"null", "Annotator+NormalSearch+WikiSearch10"); // <---------------------------
+					new Integer[] { 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+							15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 }, 3.8,
+					6.0, 0.7, 0.03, 5.0)
+					+ "_" + "ANW";
 
-			
-/*			String modelFileEF = OnlineTester.getModelFileNameBaseEF(
-					new Integer[]{ 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
-					 3, 4, 0.7,0.035,8.0)+"_"+"AN";
-			
-			runId = String.format(ERDMain.SMAPH_PARAMS_FORMAT, "wikisense",
-					0.0, "COMMONNESS", "base", "mw", 0.6f,
-					"EditDistanceSpotFilter", 0.7,
-					"SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",
-					"null", "Annotator+NormalSearch");*/
+			runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
+					"PAGERANK", "base", "jaccard", 0.6f,
+					"EditDistanceSpotFilter", 0.7, "SvmEntityFilter",
+					modelFileEF, "NoEmptyQueryFilter", "null",
+					"Annotator+NormalSearch+WikiSearch10"); // <---------------------------
+
+			/*
+			 * String modelFileEF = OnlineTester.getModelFileNameBaseEF( new
+			 * Integer[]{ 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
+			 * 3, 4, 0.7,0.035,8.0)+"_"+"AN";
+			 * 
+			 * runId = String.format(ERDMain.SMAPH_PARAMS_FORMAT, "wikisense",
+			 * 0.0, "COMMONNESS", "base", "mw", 0.6f, "EditDistanceSpotFilter",
+			 * 0.7, "SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",
+			 * "null", "Annotator+NormalSearch");
+			 */
 		}
 		if (runId.equals("___reset_models")) {
-				System.out.println("Invalidating SVM models...");
+			System.out.println("Invalidating SVM models...");
 			libSvmEmptyQueryFilter = null;
 			libSvmEntityFilter = null;
 			return new Vector<>();
@@ -304,83 +295,74 @@ public class Annotator {
 		int wikiSearchPages = 0;
 		boolean includeSourceAnnotatorCandidates = false;
 		int topKannotatorCandidates = 0;
-		boolean includeSourceRelatedSearch= false;
-		int topKRelatedSearch= 0;
-		
+		boolean includeSourceRelatedSearch = false;
+		int topKRelatedSearch = 0;
+
 		{
-			double[][] paramsToTest = new double[][] {
-					{0.01, 1},
-					{0.01, 5},
-					{0.01, 10},
-					{0.03, 1},
-					{0.03, 5},
-					{0.03, 10},
-					{0.044, 1},
-					{0.044, 5},
-					{0.044, 10},
-					{0.06, 1},
-					{0.06, 5},
-					{0.06, 10},
+			double[][] paramsToTest = new double[][] { { 0.01, 1 },
+					{ 0.01, 5 }, { 0.01, 10 }, { 0.03, 1 }, { 0.03, 5 },
+					{ 0.03, 10 }, { 0.044, 1 }, { 0.044, 5 }, { 0.044, 10 },
+					{ 0.06, 1 }, { 0.06, 5 }, { 0.06, 10 },
 
 			};
 			double[][] weightsToTest = new double[][] {
 
-					/*{ 3, 4 },*/
-					{ 3.8, 6 }
+			/* { 3, 4 }, */
+			{ 3.8, 6 }
 
-					};
-			Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3, 6, 7, 8,
-				9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-				25},
-					/*		{ 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},};*/
 			};
-/*			double[][] weightsToTest = new double[][] {
-
-					{ 3.8, 6 }
-
-					};
-					Integer[][] featuresSetsToTest = new Integer[][] {
-							{ 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,19, 20,21,22,23,24,25,26,27,28,29},
-					};
-*/
+			Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3, 6, 7,
+					8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+					23, 24, 25 },
+			/* { 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},}; */
+			};
+			/*
+			 * double[][] weightsToTest = new double[][] {
+			 * 
+			 * { 3.8, 6 }
+			 * 
+			 * }; Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3,
+			 * 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,19,
+			 * 20,21,22,23,24,25,26,27,28,29}, };
+			 */
 			if (runId.startsWith("ftr_test_")) {
-				String sources = runId.substring("ftr_test_"
-						.length(), "ftr_test_XXX"
-						.length());
-				int idftr = Integer.parseInt(runId.substring("ftr_test_XXX_"
-						.length(), "ftr_test_XXX_XXX"
-						.length()));
-				int idWeight = Integer.parseInt(runId.substring("ftr_test_XXX_XXX_"
-						.length(), "ftr_test_XXX_XXX_XXX"
-						.length()));
-				double edThr = Double.parseDouble(runId.substring("ftr_test_XXX_XXX_XXX_"
-						.length(), "ftr_test_XXX_XXX_XXX_XXX"
-						.length()));
-				int idParam = Integer.parseInt(runId.substring("ftr_test_XXX_XXX__XXX_XXX"
-						.length(), "ftr_test_XXX_XXX_XXX_XXX_XXX"
-						.length()));
-				
+				String sources = runId.substring("ftr_test_".length(),
+						"ftr_test_XXX".length());
+				int idftr = Integer.parseInt(runId.substring(
+						"ftr_test_XXX_".length(), "ftr_test_XXX_XXX".length()));
+				int idWeight = Integer.parseInt(runId.substring(
+						"ftr_test_XXX_XXX_".length(),
+						"ftr_test_XXX_XXX_XXX".length()));
+				double edThr = Double.parseDouble(runId.substring(
+						"ftr_test_XXX_XXX_XXX_".length(),
+						"ftr_test_XXX_XXX_XXX_XXX".length()));
+				int idParam = Integer.parseInt(runId.substring(
+						"ftr_test_XXX_XXX__XXX_XXX".length(),
+						"ftr_test_XXX_XXX_XXX_XXX_XXX".length()));
+
 				String sourcesString = "";
-				for (char c:sources.toCharArray())
+				for (char c : sources.toCharArray())
 					if (c == 'A')
 						sourcesString += "Annotator+";
 					else if (c == 'W')
 						sourcesString += "WikiSearch10+";
 					else if (c == 'N')
 						sourcesString += "NormalSearch+";
-				sourcesString = sourcesString.substring(0,sourcesString.length()-1);
-				
+				sourcesString = sourcesString.substring(0,
+						sourcesString.length() - 1);
+
 				double wPos = weightsToTest[idWeight][0];
 				double wNeg = weightsToTest[idWeight][1];
 				double gamma = paramsToTest[idParam][0];
 				double C = paramsToTest[idParam][1];
 				String modelFileEF = GenerateModel.getModelFileNameBaseEF(
-						featuresSetsToTest[idftr], wPos, wNeg, edThr,gamma,C)+"_"+sources;
-				runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense",
-						0.0, "COMMONNESS", "base", "mw", 0.6f,
-						"EditDistanceSpotFilter", edThr,
-						"SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",
-						"null", sourcesString);
+						featuresSetsToTest[idftr], wPos, wNeg, edThr, gamma, C)
+						+ "_" + sources;
+				runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
+						"COMMONNESS", "base", "mw", 0.6f,
+						"EditDistanceSpotFilter", edThr, "SvmEntityFilter",
+						modelFileEF, "NoEmptyQueryFilter", "null",
+						sourcesString);
 
 			}
 		}
@@ -423,11 +405,11 @@ public class Annotator {
 
 			}
 			int sourcesCount = 0;
-			if (entitySources.contains("Annotator")){
+			if (entitySources.contains("Annotator")) {
 				includeSourceAnnotator = true;
 				sourcesCount++;
 			}
-			if (entitySources.contains("NormalSearch")){
+			if (entitySources.contains("NormalSearch")) {
 				includeSourceNormalSearch = true;
 				sourcesCount++;
 			}
@@ -447,7 +429,7 @@ public class Annotator {
 				}
 				if (src.startsWith("RelatedSearch")) {
 					includeSourceRelatedSearch = true;
-					topKRelatedSearch= Integer.parseInt(src
+					topKRelatedSearch = Integer.parseInt(src
 							.substring("RelatedSearch".length()));
 					sourcesCount++;
 				}
@@ -521,32 +503,28 @@ public class Annotator {
 				}
 			}
 
-			List<Annotation> res = annotatePure(text, textID, new BingAnnotator(
-					auxAnnotatorService, spotFilter, entityFilter,
-					emptyQueryFilter, includeSourceAnnotator,
-					includeSourceNormalSearch, includeSourceWikiSearch,
-					wikiSearchPages, includeSourceAnnotatorCandidates,
-					topKannotatorCandidates, includeSourceRelatedSearch,topKRelatedSearch, wikiApi, wikiToFreeb, bingKey));
-			
-			/*if (!res.isEmpty()){ ///////////////////////////////////////////////////////////////////////////////////
-				List<Annotation> dummyRes = new Vector<>();
-				Annotation a = new Annotation();
-				a.setQid(textID);
-				a.setInterpretationSet(0);
-				String title = "Scorrano";
-				String mid = wikiToFreeb.getFreebaseId(title);
-				System.out.printf("Annotation: mid=%s title=%s%n", mid,
-						title);
-				if (mid == null)
-					throw new RuntimeException();
-				a.setPrimaryId(mid);
-				a.setMentionText("null");
-				a.setScore(0.3f);
-				dummyRes.add(a);
-				return dummyRes;
-			}*/
-			
-			
+			List<Annotation> res = annotatePure(text, textID,
+					new BingAnnotator(auxAnnotatorService, spotFilter,
+							entityFilter, emptyQueryFilter,
+							includeSourceAnnotator, includeSourceNormalSearch,
+							includeSourceWikiSearch, wikiSearchPages,
+							includeSourceAnnotatorCandidates,
+							topKannotatorCandidates,
+							includeSourceRelatedSearch, topKRelatedSearch,
+							wikiApi, wikiToFreeb, bingKey));
+
+			/*
+			 * if (!res.isEmpty()){ /////////////////////////////////////////
+			 * ////////////////////////////////////////// List<Annotation>
+			 * dummyRes = new Vector<>(); Annotation a = new Annotation();
+			 * a.setQid(textID); a.setInterpretationSet(0); String title =
+			 * "Scorrano"; String mid = wikiToFreeb.getFreebaseId(title);
+			 * System.out.printf("Annotation: mid=%s title=%s%n", mid, title);
+			 * if (mid == null) throw new RuntimeException();
+			 * a.setPrimaryId(mid); a.setMentionText("null"); a.setScore(0.3f);
+			 * dummyRes.add(a); return dummyRes; }
+			 */
+
 			return res;
 		}
 
@@ -565,10 +543,7 @@ public class Annotator {
 			return new Vector<>();
 
 		throw new RuntimeException("unrecognized runID=" + runId);
-		}
-		catch (Exception | Error e){
-			return new Vector<Annotation>();
-		}
+
 	}
 
 	public static HashSet<MultipleAnnotation> deleteOverlappingAnnotations(

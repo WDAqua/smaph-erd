@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 source ./scripts/config.sh
 
-EXPECTED_ARGS=2
+EXPECTED_ARGS=1
 
 if [ $# -ne $EXPECTED_ARGS ]
 then
-  echo "Usage: `basename $0` entity.tsv db-folder"
+  echo "Usage: `basename $0` db-folder"
   exit $E_BADARGS
 fi
 
-echo "index wikipedia-label -> freebase-id mappings in $1 in folder $2"
-$JAVA $CLI.IndexWikipediaLabelToFreebaseIdCLI -input $1 -dbdir $2
-echo "done, mappings in $2"
+if [ ! -f entity.tsv ]
+then
+  echo "File entity.tsv not found, downloading"
+  wget http://web-ngram.research.microsoft.com/erd2014/Docs/entity.tsv
+fi
+
+
+echo "index wikipedia-label -> freebase-id mappings in entity.tsv in folder $1"
+$JAVA $CLI.IndexWikipediaLabelToFreebaseIdCLI -input entity.tsv -dbdir $1
+echo "done, mappings in $1"

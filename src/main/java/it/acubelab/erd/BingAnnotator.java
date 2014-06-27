@@ -62,7 +62,7 @@ import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 public class BingAnnotator implements Sa2WSystem {
 	private static final String WIKI_URL_LEADING = "http://en.wikipedia.org/wiki/";
 	private static final int BING_RETRY = 3;
-	private static String bingKey;
+	private String bingKey;
 	private static final int FLUSH_EVERY = 50;
 	public static final String WIKITITLE_ENDPAR_REGEX = "\\s*\\([^\\)]*\\)\\s*$";
 	private static HashMap<String, JSONObject> url2jsonCache = new HashMap<>();
@@ -114,8 +114,7 @@ public class BingAnnotator implements Sa2WSystem {
 		this.topKAnnotatorCandidates = topKAnnotatorCandidates;
 		this.includeSourceRelatedSearch = includeRelatedSearch;
 		this.topKRelatedSearch = topKRelatedSearch;
-		//TODO: this is ugly
-		BingAnnotator.bingKey = bingKey;
+		this.bingKey = bingKey;
 	}
 
 	public static synchronized void increaseFlushCounter()
@@ -557,7 +556,7 @@ public class BingAnnotator implements Sa2WSystem {
 		}
 	}
 
-	private static Pair<Integer, Double> takeBingData(String query,
+	private Pair<Integer, Double> takeBingData(String query,
 			List<Pair<String, Integer>> result, List<String> urls,
 			List<String> relatedSearch) throws Exception {
 		if (!result.isEmpty())
@@ -591,12 +590,11 @@ public class BingAnnotator implements Sa2WSystem {
 		return new Pair<Integer, Double>(webResults.size(), webTotal);
 	}
 
-	private static synchronized JSONObject queryBing(String query, int retryLeft)
+	private synchronized JSONObject queryBing(String query, int retryLeft)
 			throws Exception {
 		boolean forceCacheOverride = retryLeft < BING_RETRY;
 		if (forceCacheOverride)
 			Thread.sleep(1000);
-
 		String accountKeyAuth = Base64.encode(
 				(bingKey + ":" + bingKey).getBytes(), 0);
 

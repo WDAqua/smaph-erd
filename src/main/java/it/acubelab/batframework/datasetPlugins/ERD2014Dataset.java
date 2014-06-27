@@ -42,7 +42,8 @@ public class ERD2014Dataset implements A2WDataset {
 			int length =  tokens[3].length();
 			String freeBaseMID = tokens[2];
 			String title = freebApi.midToTitle(freeBaseMID);
-			annotations.get(index).add(new Annotation(position, length, wikiApi.getIdByTitle(title)));
+			if (title != null)
+				annotations.get(index).add(new Annotation(position, length, wikiApi.getIdByTitle(title)));
 		}
 		annotationsBr.close();
 	}
