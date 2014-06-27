@@ -25,7 +25,7 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 		MentionSpotter, CandidatesSpotter {
 	private static final int RETRY_N = 2;
 	private long lastTime = 0;
-	private boolean useContext = false, useTagger = true, bogusFilter = false;
+	private boolean useContext, useTagger, bogusFilter;
 	private final String urlTag;
 	private final String urlSpot;
 	private final String urlD2W;
@@ -34,6 +34,7 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 	private String sortBy;
 	private HashMap<String, HashMap<String, Double>> additionalInfo = new HashMap<>();
 	private HashMap<String, List<HashMap<String, Double>>> additionalCandidatesInfo = new HashMap<>();
+	private boolean brutalD2WReduction = false;
 	private static  HashMap<String, JSONObject> url2jsonCache = null;
 	static long flushCounter = 0;
 	static final int FLUSH_EVERY = 200;
@@ -82,12 +83,12 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 			String sortBy, String relatedness, String epsilon,
 			String minLinkProbability) {
 		this(ip, port, method, sortBy, relatedness, epsilon,
-				minLinkProbability, false, true, false);
+				minLinkProbability, false, false, false);
 	}
 
 	public WikiSenseAnnotatorDevelopment(String ip, int port, String method,
 			String sortBy, String relatedness, String epsilon,
-			String minLinkProbability, boolean full, boolean useTagger,
+			String minLinkProbability, boolean useContext, boolean useTagger,
 			boolean bogusFilter) {
 		this.urlTag = String.format("http://%s:%d/tag/tag", ip, port);
 		this.urlSpot = String.format("http://%s:%d/tag/spot", ip, port);
@@ -97,7 +98,7 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 		this.windowSize = "";
 		this.minCommonness = "";
 		this.kappa = "";
-		this.useContext = full;
+		this.useContext = useContext;
 		this.useTagger = useTagger;
 		this.bogusFilter = bogusFilter;
 		this.minLinkProbability = minLinkProbability;
@@ -118,8 +119,8 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 
 	@Override
 	public String getName() {
-		return String.format("WikiSense (method=%s epsilon=%s usecontext=%b)",
-				method, epsilon.equals("") ? "default" : epsilon, useContext);
+		return String.format("WikiSense (method=%s epsilon=%s usecontext=%b relatedness=%s sortby=%s)",
+				method, epsilon.equals("") ? "default" : epsilon, useContext, relatedness, sortBy);
 	}
 
 	@Override
@@ -167,7 +168,11 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 					.doubleValue();
 			double pageRank = ((Double) js_ann.get("pageRank")).doubleValue();
 			// System.out.println(text.substring(start, end) + "->" + id);
-			res.add(new Annotation(start, end - start, id));
+			
+			Mention m = new Mention(start, end-start);
+			if (mentions.contains(m))
+				res.add(new Annotation(m.getPosition(), m.getLength(), id));
+			
 			String mention = text.substring(start, end);
 			if (!additionalInfo.containsKey(mention))
 				additionalInfo.put(mention, new HashMap<String, Double>());
@@ -211,6 +216,8 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 	@Override
 	public HashSet<Annotation> solveD2W(String text, HashSet<Mention> mentions)
 			throws AnnotationException {
+		if (brutalD2WReduction)
+			return ProblemReduction.Sa2WToD2W(this.solveSa2W(text), mentions, -1f);
 		return solveD2WParams(text, mentions, minCommonness, epsilon, kappa );
 	}
 
@@ -476,5 +483,9 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 				additionalCandidatesInfo);
 		additionalCandidatesInfo.clear();
 		return clone;
+	}
+
+	public void setBrutalD2WReduction() {
+		this.brutalD2WReduction = true;
 	}
 }

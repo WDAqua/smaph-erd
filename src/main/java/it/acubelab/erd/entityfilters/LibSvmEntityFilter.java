@@ -49,14 +49,14 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 				getOrDefault(features, "is_s4", 0.0),
 				getOrDefault(features, "is_s5", 0.0),
 				getOrDefault(features, "s1_freq", 0.0),
-				getOrDefault(features, "s1_rhoScore", 0.0),
-				getOrDefault(features, "s1_localCoherence", 0.0),
+				getOrDefault(features, "s1_rhoScore", 0.0),//
+				getOrDefault(features, "s1_localCoherence", 0.0),//
 				getOrDefault(features, "s1_lp", 0.0),
 				getOrDefault(features, "s1_editDistance", 0.0), 				// 10
-				getOrDefault(features, "s1_commonness", 0.0),
+				getOrDefault(features, "s1_commonness", 0.0),//
 				getOrDefault(features, "s1_avgRank", 0.0),
 				getOrDefault(features, "s1_ambiguity", 0.0),
-				getOrDefault(features, "s1_pageRank", 0.0),
+				getOrDefault(features, "s1_pageRank", 0.0),//
 				getOrDefault(features, "s2_editDistance", 0.0),
 				getOrDefault(features, "s2_rank", 0.0),
 				getOrDefault(features, "s2_webTotalWiki", 0.0),

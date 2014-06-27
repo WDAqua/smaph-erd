@@ -16,43 +16,20 @@
 package it.cnr.isti.hpc.erd;
 
 import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
-import it.acubelab.batframework.problems.C2WSystem;
 import it.acubelab.batframework.problems.CandidatesSpotter;
-import it.acubelab.batframework.problems.D2WSystem;
 import it.acubelab.batframework.problems.Sa2WSystem;
 import it.acubelab.batframework.systemPlugins.TagmeAnnotator;
 import it.acubelab.batframework.utils.*;
 import it.acubelab.batframework.data.MultipleAnnotation;
-import it.acubelab.batframework.data.ScoredAnnotation;
 import it.acubelab.erd.BingAnnotator;
-import it.acubelab.erd.emptyqueryfilters.EmptyQueryFilter;
-import it.acubelab.erd.emptyqueryfilters.LibSvmEmptyQueryFilter;
-import it.acubelab.erd.emptyqueryfilters.NoEmptyQueryFilter;
-import it.acubelab.erd.entityfilters.EntityFilter;
-import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
-import it.acubelab.erd.entityfilters.NoEntityFilter;
+import it.acubelab.erd.emptyqueryfilters.*;
+import it.acubelab.erd.entityfilters.*;
 import it.acubelab.erd.learn.GenerateModel;
-import it.acubelab.erd.main.ERDMain;
-import it.acubelab.erd.spotfilters.EditDistanceSpotFilter;
-import it.acubelab.erd.spotfilters.FrequencySpotFilter;
-import it.acubelab.erd.spotfilters.NoSpotFilter;
-import it.acubelab.erd.spotfilters.RankWeightSpotFilter;
-import it.acubelab.erd.spotfilters.SpotFilter;
+import it.acubelab.erd.spotfilters.*;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Vector;
+import java.io.*;
+import java.util.*;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
-
-import org.xml.sax.SAXException;
 
 
 /**
@@ -61,6 +38,7 @@ import org.xml.sax.SAXException;
  *         Created on Mar 15, 2014
  */
 public class Annotator {
+	public static final String SMAPH_PARAMS_FORMAT = "BING-auxAnnotator=%s&minLp=%.5f&sortBy=%s&method=%s&relatedness=%s&epsilon=%.5f&spotFilter=%s&spotFilterThreshold=%f&entityFilter=%s&svmEntityFilterModelBase=%s&emptyQueryFilter=%s&svmEmptyQueryFilterModelBase=%s&entitySources=%s";
 	private static WikipediaApiInterface wikiApi = null;
 	private static WikipediaToFreebase wikiToFreeb = null;
 	private static BingAnnotator bingAnnotator = null;
@@ -69,7 +47,7 @@ public class Annotator {
 	private static LibSvmEntityFilter libSvmEntityFilter = null;
 	private static LibSvmEmptyQueryFilter libSvmEmptyQueryFilter = null;
 	private static String bingKey = null;
-
+	
 	public Annotator() {
 		try {
 			if (wikiApi == null)
@@ -267,7 +245,7 @@ public class Annotator {
 					new Integer[]{1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25},
 					 3.8, 6.0, 0.7,0.03,5.0)+"_"+"ANW";
 			
-			runId = String.format(ERDMain.SMAPH_PARAMS_FORMAT, "wikisense",
+			runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense",
 					0.0, "PAGERANK", "base", "jaccard", 0.6f,
 					"EditDistanceSpotFilter", 0.7,
 					"SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",
@@ -398,7 +376,7 @@ public class Annotator {
 				double C = paramsToTest[idParam][1];
 				String modelFileEF = GenerateModel.getModelFileNameBaseEF(
 						featuresSetsToTest[idftr], wPos, wNeg, edThr,gamma,C)+"_"+sources;
-				runId = String.format(ERDMain.SMAPH_PARAMS_FORMAT, "wikisense",
+				runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense",
 						0.0, "COMMONNESS", "base", "mw", 0.6f,
 						"EditDistanceSpotFilter", edThr,
 						"SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",

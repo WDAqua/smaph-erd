@@ -114,7 +114,8 @@ public class BingAnnotator implements Sa2WSystem {
 		this.topKAnnotatorCandidates = topKAnnotatorCandidates;
 		this.includeSourceRelatedSearch = includeRelatedSearch;
 		this.topKRelatedSearch = topKRelatedSearch;
-		this.bingKey = bingKey;
+		//TODO: this is ugly
+		BingAnnotator.bingKey = bingKey;
 	}
 
 	public static synchronized void increaseFlushCounter()
