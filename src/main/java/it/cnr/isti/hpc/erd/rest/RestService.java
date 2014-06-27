@@ -30,6 +30,8 @@ import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.List;
@@ -140,12 +142,12 @@ public class RestService {
 				JSONObject annJson = new JSONObject();
 			annJson.put("wid", wid);
 			annJson.put("title", title);
-			annJson.put("url", "http://en.wikipedia.org/wiki/"+URLEncoder.encode(title, "utf8"));
+			annJson.put("url", new URI("http://en.wikipedia.org/wiki/"+title).toURL());
 			annotJson.put(annJson);
 			}
 		}
 		res.put("annotations", annotJson);
-		} catch (JSONException |IOException e){
+		} catch (JSONException |IOException| URISyntaxException e){
 			throw new RuntimeException(e);
 		}
 		
