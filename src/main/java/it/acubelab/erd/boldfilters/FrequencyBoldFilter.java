@@ -1,4 +1,4 @@
-package it.acubelab.erd.spotfilters;
+package it.acubelab.erd.boldfilters;
 
 import it.acubelab.batframework.utils.Pair;
 import it.acubelab.erd.SmaphAnnotatorDebugger;
@@ -9,10 +9,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Vector;
 
-public class FrequencySpotFilter implements SpotFilter {
+/**
+ * A filter that filters out all bolds that have a frequency lower than the threshold.
+ */
+public class FrequencyBoldFilter implements BoldFilter {
 	private float minSpotFreq;
 
-	public FrequencySpotFilter(float minSpotFreq) {
+	public FrequencyBoldFilter(float minSpotFreq) {
 		this.minSpotFreq = minSpotFreq;
 	}
 

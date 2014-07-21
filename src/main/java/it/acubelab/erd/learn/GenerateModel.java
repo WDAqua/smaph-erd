@@ -5,7 +5,7 @@ import it.acubelab.batframework.metrics.MetricsResultSet;
 import it.acubelab.batframework.systemPlugins.WikiSenseAnnotator;
 import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.BingAnnotator;
+import it.acubelab.erd.SmaphAnnotator;
 import it.acubelab.erd.SmaphAnnotatorDebugger;
 import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
@@ -30,60 +30,40 @@ public class GenerateModel {
 		Locale.setDefault(Locale.US);
 		SmaphAnnotatorDebugger.activate();
 		String freebKey = "<FREEBASE_KEY>";
-		String bingKey= "<BING_KEY>";
+		String bingKey = "<BING_KEY>";
 		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
 				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
-		FreebaseApi freebApi = new FreebaseApi(
-				freebKey, "freeb.cache");
+		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
 		double[][] paramsToTest = new double[][] {
-/*				{0.035, 0.5 },
-				{0.035, 1 },
-				{0.035, 4 },
-				{0.035, 8 },
-				{0.035, 10 },
-				{0.035, 16 },
-				{0.714, .5 },
-				{0.714, 1 },
-				{0.714, 4 },
-				{0.714, 8 },
-				{0.714, 10 },
-				{0.714, 16 },
-				{0.9, .5 },
-				{0.9, 1 },
-				{0.9, 4 }, 
-				{0.9, 8 },
-				{0.9, 10 },
-				{0.9, 16 },
+		/*
+		 * {0.035, 0.5 }, {0.035, 1 }, {0.035, 4 }, {0.035, 8 }, {0.035, 10 },
+		 * {0.035, 16 }, {0.714, .5 }, {0.714, 1 }, {0.714, 4 }, {0.714, 8 },
+		 * {0.714, 10 }, {0.714, 16 }, {0.9, .5 }, {0.9, 1 }, {0.9, 4 }, {0.9, 8
+		 * }, {0.9, 10 }, {0.9, 16 },
+		 * 
+		 * { 1.0/15.0, 1 }, { 1.0/27.0, 1 },
+		 */
 
-				{ 1.0/15.0, 1 },
-				{ 1.0/27.0, 1 },*/
-				
-/*				{0.01, 1},
-				{0.01, 5},
-				{0.01, 10},
-				{0.03, 1},
-				{0.03, 5},
-				{0.03, 10},
-				{0.044, 1},
-				{0.044, 5},
-				{0.044, 10},
-				{0.06, 1},
-				{0.06, 5},
-				{0.06, 10},*/
-				{0.03, 5},
-		};
+		/*
+		 * {0.01, 1}, {0.01, 5}, {0.01, 10}, {0.03, 1}, {0.03, 5}, {0.03, 10},
+		 * {0.044, 1}, {0.044, 5}, {0.044, 10}, {0.06, 1}, {0.06, 5}, {0.06,
+		 * 10},
+		 */
+		{ 0.03, 5 }, };
 		double[][] weightsToTest = new double[][] {
 
-/*		{ 3, 4 }
-*/				{3.8,6.0}
+		/*
+		 * { 3, 4 }
+		 */{ 3.8, 6.0 }
 
 		};
 		Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3, 6, 7, 8,
-			9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-			25},
-			/*{ 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
-*/
-		
+				9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+				25 },
+		/*
+		 * { 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
+		 */
+
 		}; // < -------------------------------------- MIND THIS
 		int wikiSearckTopK = 10; // <---------------------------
 		String filePrefix = "_ANW";// <---------------------------
@@ -91,22 +71,21 @@ public class GenerateModel {
 		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");
 		List<ModelConfigurationResult> mcrs = new Vector<>();
 		for (double editDistanceThr = 0.7; editDistanceThr <= 0.7; editDistanceThr += 0.7) {
-			BingAnnotator bingAnnotator = GenerateTrainingAndTest
+			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
 					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
 							editDistanceThr, wikiSearckTopK, bingKey);
 			WikiSenseAnnotatorDevelopment.setCache("wikisense.cache");
-			BingAnnotator.setCache("bing.cache.full");
+			SmaphAnnotator.setCache("bing.cache.full");
 
 			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
 			BinaryExampleGatherer testEntityFilterGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer trainEmptyQueryGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer testEmptyQueryGatherer = new BinaryExampleGatherer();
-			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
-					bingAnnotator, trainEntityFilterGatherer,
-					trainEmptyQueryGatherer, testEntityFilterGatherer,
-					testEmptyQueryGatherer, wikiApi, wikiToFreebase, freebApi);
+			GenerateTrainingAndTest
+					.gatherExamplesTrainingAndDevel(bingAnnotator,
+							trainEntityFilterGatherer,
+							testEntityFilterGatherer, wikiApi, wikiToFreebase,
+							freebApi);
 
-			BingAnnotator.unSetCache();
+			SmaphAnnotator.unSetCache();
 			BinaryExampleGatherer trainGatherer = trainEntityFilterGatherer; // //////////////
 																				// <----------------------
 			BinaryExampleGatherer testGatherer = testEntityFilterGatherer; // //////////////
@@ -156,7 +135,7 @@ public class GenerateModel {
 						float macroF1 = metrics.getMacroF1();
 						float macroRec = metrics.getMacroRecall();
 						float macroPrec = metrics.getMacroPrecision();
-						int totVects = testGatherer.getFtrVectorCount();
+						int totVects = testGatherer.getExamplesCount();
 						mcrs.add(new ModelConfigurationResult(features, wPos,
 								wNeg, editDistanceThr, tp, fp, fn, totVects
 										- tp - fp - fn, microF1, macroF1,
@@ -164,7 +143,8 @@ public class GenerateModel {
 
 						System.err.printf("Trained %d/%d models.%n", ++count,
 								weightsToTest.length
-										* featuresSetsToTest.length *paramsToTest.length);
+										* featuresSetsToTest.length
+										* paramsToTest.length);
 					}
 				}
 			}

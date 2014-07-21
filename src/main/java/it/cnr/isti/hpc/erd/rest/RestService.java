@@ -18,33 +18,23 @@ package it.cnr.isti.hpc.erd.rest;
 
 import it.acubelab.batframework.data.ScoredAnnotation;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.BingAnnotator;
+import it.acubelab.erd.SmaphAnnotator;
 import it.acubelab.erd.SmaphConfig;
-import it.acubelab.erd.emptyqueryfilters.NoEmptyQueryFilter;
+import it.acubelab.erd.boldfilters.EditDistanceBoldFilter;
 import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
-import it.acubelab.erd.spotfilters.EditDistanceSpotFilter;
 import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
 import it.cnr.isti.hpc.erd.Annotation;
 import it.cnr.isti.hpc.erd.Annotator;
-import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.List;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
+import org.codehaus.jettison.json.*;
 
 import com.sun.jersey.multipart.FormDataParam;
 
@@ -110,12 +100,12 @@ public class RestService {
 				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
 				"0", false, false, false);
 
-		BingAnnotator ann = null;
+		SmaphAnnotator ann = null;
 		try {
-			ann = new BingAnnotator(auxAnnotatorService,
-					new EditDistanceSpotFilter(0.7), new LibSvmEntityFilter(
-							modelBase), new NoEmptyQueryFilter(), true, true,
-					true, 10, false, -1, false, -1, wikiApi, bingKey);
+			ann = new SmaphAnnotator(auxAnnotatorService,
+					new EditDistanceBoldFilter(0.7), new LibSvmEntityFilter(
+							modelBase), true, true, true, 10, false, -1, false,
+					-1, wikiApi, bingKey);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
@@ -126,29 +116,34 @@ public class RestService {
 		return encodeJsonResponse(annotations, wikiApi);
 	}
 
-	private String encodeJsonResponse(HashSet<ScoredAnnotation> annotations, WikipediaApiInterface wikiApi) {
+	private String encodeJsonResponse(HashSet<ScoredAnnotation> annotations,
+			WikipediaApiInterface wikiApi) {
 		JSONObject res = new JSONObject();
-		
+
 		try {
-		res.put("response-code", "OK");
-		
-		JSONArray annotJson = new JSONArray();
-		for (ScoredAnnotation ann : annotations){
-			int wid = ann.getConcept();
-			String title = wikiApi.getTitlebyId(ann.getConcept());
-			if (wid >=0 && title != null){
-				JSONObject annJson = new JSONObject();
-			annJson.put("wid", wid);
-			annJson.put("title", title);
-			annJson.put("url", "http://en.wikipedia.org/wiki/"+URLEncoder.encode(title, "utf8").replace("+", "%20"));
-			annotJson.put(annJson);
+			res.put("response-code", "OK");
+
+			JSONArray annotJson = new JSONArray();
+			for (ScoredAnnotation ann : annotations) {
+				int wid = ann.getConcept();
+				String title = wikiApi.getTitlebyId(ann.getConcept());
+				if (wid >= 0 && title != null) {
+					JSONObject annJson = new JSONObject();
+					annJson.put("wid", wid);
+					annJson.put("title", title);
+					annJson.put(
+							"url",
+							"http://en.wikipedia.org/wiki/"
+									+ URLEncoder.encode(title, "utf8").replace(
+											"+", "%20"));
+					annotJson.put(annJson);
+				}
 			}
-		}
-		res.put("annotations", annotJson);
-		} catch (JSONException |IOException e){
+			res.put("annotations", annotJson);
+		} catch (JSONException | IOException e) {
 			throw new RuntimeException(e);
 		}
-		
+
 		return res.toString();
 	}
 

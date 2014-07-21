@@ -12,6 +12,18 @@ import org.tartarus.snowball.ext.EnglishStemmer;
 
 public class SmaphUtils {
 
+	/**
+	 * For each word of bold, finds the word in query that has the minimum edit
+	 * distance, normalized by the word lenght. Returns the average of those
+	 * distances.
+	 * 
+	 * @param query
+	 *            a query.
+	 * @param bold
+	 *            a bold.
+	 * @return the averaged normalized word-by-word edit distance of bold
+	 *         against query.
+	 */
 	public static double getMinEditDist(String query, String bold) {
 		query = query.replaceAll("\\W+", " ").toLowerCase();
 		bold = bold.replaceAll("\\W+", " ").toLowerCase();
@@ -35,6 +47,13 @@ public class SmaphUtils {
 		return avgMinDist / tokensB.length;
 	}
 
+	/**
+	 * @param tokenB
+	 *            a word.
+	 * @param tokenQ
+	 *            another word.
+	 * @return the normalized edit distance between tokenB and tokenQ.
+	 */
 	public static float getNormEditDistance(String tokenB, String tokenQ) {
 		if (tokenQ.isEmpty() || tokenB.isEmpty())
 			return 1;
@@ -42,6 +61,11 @@ public class SmaphUtils {
 		return (float) lev / (float) Math.max(tokenB.length(), tokenQ.length());
 	}
 
+	/**
+	 * @param title
+	 *            the title of a Wikipedia page.
+	 * @return true iff the title is that of a regular page.
+	 */
 	public static boolean acceptWikipediaTitle(String title) {
 		// TODO: this can definitely be done in a cleaner way.
 		return !(title.startsWith("Talk:") || title.startsWith("Special:")
@@ -53,6 +77,11 @@ public class SmaphUtils {
 					.contains("(disambiguation)"));
 	}
 
+	/**
+	 * @param ftrCount
+	 *            the number of features.
+	 * @return a vector containing all feature ids from 1 to ftrCount.
+	 */
 	public static Vector<Integer> getAllFtrVect(int ftrCount) {
 		Vector<Integer> res = new Vector<>();
 		for (int i = 1; i < ftrCount + 1; i++)
@@ -60,14 +89,28 @@ public class SmaphUtils {
 		return res;
 	}
 
+	/**
+	 * Turns a list of pairs <b,r>, where b is a bold and r is the position in
+	 * which the bold occurred, to the list of bolds and the hashmap between a
+	 * position and the list of bolds occurring in that position.
+	 * 
+	 * @param boldAndRanks
+	 *            a list of pairs <b,r>, where b is a bold and r is the position
+	 *            in which the bold occurred.
+	 * @param positions
+	 *            where to store the mapping between a position (rank) and all
+	 *            bolds that appear in that position.
+	 * @param bolds
+	 *            where to store the bolds.
+	 */
 	public static void mapRankToBoldsLC(
-			List<Pair<String, Integer>> spotAndRanks,
-			HashMap<Integer, HashSet<String>> positions, HashSet<String> spots) {
+			List<Pair<String, Integer>> boldAndRanks,
+			HashMap<Integer, HashSet<String>> positions, HashSet<String> bolds) {
 
-		for (Pair<String, Integer> spotAndRank : spotAndRanks) {
-			String spot = spotAndRank.first.toLowerCase();
-			int rank = spotAndRank.second;
-			spots.add(spot);
+		for (Pair<String, Integer> boldAndRank : boldAndRanks) {
+			String spot = boldAndRank.first.toLowerCase();
+			int rank = boldAndRank.second;
+			bolds.add(spot);
 			if (!positions.containsKey(rank))
 				positions.put(rank, new HashSet<String>());
 			positions.get(rank).add(spot);
@@ -75,19 +118,39 @@ public class SmaphUtils {
 
 	}
 
+	/**
+	 * Turns a list of pairs <b,r>, where b is a bold and r is the position in
+	 * which the bold occurred, to a mapping from a bold to the positions in
+	 * which the bolds occurred.
+	 * 
+	 * @param boldAndRanks
+	 *            a list of pairs <b,r>, where b is a bold and r is the position
+	 *            in which the bold occurred.
+	 * @return a mapping from a bold to the positions in which the bold
+	 *         occurred.
+	 */
 	public static HashMap<String, HashSet<Integer>> findPositionsLC(
 			List<Pair<String, Integer>> boldAndRanks) {
 		HashMap<String, HashSet<Integer>> positions = new HashMap<>();
 		for (Pair<String, Integer> boldAndRank : boldAndRanks) {
-			String spot = boldAndRank.first.toLowerCase();
+			String bold = boldAndRank.first.toLowerCase();
 			int rank = boldAndRank.second;
-			if (!positions.containsKey(spot))
-				positions.put(spot, new HashSet<Integer>());
-			positions.get(spot).add(rank);
+			if (!positions.containsKey(bold))
+				positions.put(bold, new HashSet<Integer>());
+			positions.get(bold).add(rank);
 		}
 		return positions;
 	}
 
+	/**
+	 * Given a string, replaces all words with their stemmed version.
+	 * 
+	 * @param str
+	 *            a string.
+	 * @param stemmer
+	 *            the stemmer.
+	 * @return str with all words stemmed.
+	 */
 	public static String stemString(String str, EnglishStemmer stemmer) {
 		String stemmedString = "";
 		String[] words = str.split("\\s+");

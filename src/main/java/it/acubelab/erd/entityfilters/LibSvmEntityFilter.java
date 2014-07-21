@@ -7,6 +7,9 @@ import java.io.*;
 import java.nio.channels.Pipe.SourceChannel;
 import java.util.HashMap;
 
+/**
+ * An SVM-based entity filter.
+ */
 public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 
 	public LibSvmEntityFilter(String modelFileBase) throws IOException {
@@ -32,6 +35,10 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 		return res;
 	}
 
+	/**Turns a frature_name-feature_value mapping to an array of features.
+	 * @param features the mapping from feature names to feature values.
+	 * @return an array of feature values.
+	 */
 	public static double[] featuresToFtrVectStatic(
 			HashMap<String, Double> features) {
 

@@ -1,44 +1,18 @@
 package it.acubelab.erd.learn;
 
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadInfo;
-import java.lang.management.ThreadMXBean;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Vector;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.apache.commons.lang3.tuple.Triple;
-
-import it.acubelab.batframework.metrics.MatchRelation;
-import it.acubelab.batframework.metrics.Metrics;
-import it.acubelab.batframework.metrics.MetricsResultSet;
-import it.acubelab.batframework.utils.FreebaseApi;
+import it.acubelab.batframework.metrics.*;
+import it.acubelab.batframework.utils.*;
 import it.acubelab.batframework.utils.Pair;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.BingAnnotator;
-import it.acubelab.erd.IndexMatch;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
-import it.acubelab.erd.SmaphUtils;
-import it.acubelab.erd.emptyqueryfilters.NoEmptyQueryFilter;
-import it.acubelab.erd.entityfilters.NoEntityFilter;
-import it.acubelab.erd.spotfilters.EditDistanceSpotFilter;
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.acubelab.erd.*;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
-import libsvm.svm;
-import libsvm.svm_model;
-import libsvm.svm_node;
-import libsvm.svm_parameter;
-import libsvm.svm_problem;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.*;
+
+import libsvm.*;
+
+import org.apache.commons.lang3.tuple.*;
 
 public class TuneModel {
 	private static final int THREADS_NUM = 4;
@@ -47,8 +21,8 @@ public class TuneModel {
 		MAXIMIZE_TN, MAXIMIZE_MICRO_F1, MAXIMIZE_MACRO_F1
 	}
 
-	public static svm_parameter getParameters(double wPos,
-			double wNeg, double gamma, double C) {
+	public static svm_parameter getParameters(double wPos, double wNeg,
+			double gamma, double C) {
 		svm_parameter param = new svm_parameter();
 		param.svm_type = svm_parameter.C_SVC;
 		param.kernel_type = svm_parameter.RBF;
@@ -69,7 +43,8 @@ public class TuneModel {
 	}
 
 	public static svm_model trainModel(double wPos, double wNeg,
-			Vector<Integer> pickedFtrs, svm_problem trainProblem,double gamma, double C) {
+			Vector<Integer> pickedFtrs, svm_problem trainProblem, double gamma,
+			double C) {
 		svm_parameter param = getParameters(wPos, wNeg, gamma, C);
 
 		String error_msg = svm.svm_check_parameter(trainProblem, param);
@@ -102,10 +77,10 @@ public class TuneModel {
 				trainProblem, mins, maxs);
 	}
 
-	public static Vector<svm_problem> getScaledTestProblems(
+	public static List<svm_problem> getScaledTestProblems(
 			Vector<Integer> pickedFtrsI, BinaryExampleGatherer testGatherer,
 			double[] mins, double[] maxs) {
-		Vector<svm_problem> testProblems = testGatherer
+		List<svm_problem> testProblems = testGatherer
 				.generateLibSvmProblemOnePerInstance(pickedFtrsI);
 		for (svm_problem testProblem : testProblems)
 			LibSvmUtils.scaleProblem(testProblem, mins, maxs);
@@ -115,7 +90,8 @@ public class TuneModel {
 	private static Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> trainIterative(
 			BinaryExampleGatherer trainGatherer,
 			BinaryExampleGatherer develGatherer, double editDistanceThreshold,
-			OptimizaionProfiles optProfile, double optProfileThreshold, double gamma, double C) {
+			OptimizaionProfiles optProfile, double optProfileThreshold,
+			double gamma, double C) {
 
 		Vector<ModelConfigurationResult> globalScoreboard = new Vector<>();
 		Vector<Integer> allFtrs = SmaphUtils.getAllFtrVect(trainGatherer
@@ -135,9 +111,9 @@ public class TuneModel {
 		try {
 			Pair<Double, Double> bestBroadWeights = new WeightSelector(
 					broadwPosMin, broadwPosMax, broadkPos, broadwNegMin,
-					broadwNegMax, 1.0,gamma, C, broadSteps, editDistanceThreshold,
-					allFtrs, trainGatherer, develGatherer, optProfile,
-					globalScoreboard).call();
+					broadwNegMax, 1.0, gamma, C, broadSteps,
+					editDistanceThreshold, allFtrs, trainGatherer,
+					develGatherer, optProfile, globalScoreboard).call();
 			bestwPos = bestBroadWeights.first;
 			bestwNeg = bestBroadWeights.second;
 		} catch (Exception e) {
@@ -145,7 +121,7 @@ public class TuneModel {
 			throw new RuntimeException();
 		}
 		System.err.println("Done broad weighting.");
-		
+
 		int bestIterPos = WeightSelector.weightToIter(bestwPos, broadwPosMax,
 				broadwPosMin, broadkPos, broadSteps);
 		double finewPosMin = WeightSelector.computeWeight(broadwPosMax,
@@ -156,30 +132,30 @@ public class TuneModel {
 		double finewNegMax = 2.0;
 
 		ModelConfigurationResult bestResult = ModelConfigurationResult
-				.findBest(globalScoreboard, optProfile, optProfileThreshold);;
+				.findBest(globalScoreboard, optProfile, optProfileThreshold);
+		;
 		for (int iteration = 0; iteration < iterations; iteration++) {
 			// Do feature selection
-	/*		ModelConfigurationResult bestFtr;
-			{
-				Vector<ModelConfigurationResult> scoreboardFtrSelection = new Vector<>();
-				new AblationFeatureSelector(bestwPos, bestwNeg,
-						editDistanceThreshold, trainGatherer, develGatherer,
-						optProfile, optProfileThreshold, scoreboardFtrSelection)
-						.run();
-				bestFtr = ModelConfigurationResult
-						.findBest(scoreboardFtrSelection, optProfile,
-								optProfileThreshold);
-				globalScoreboard.addAll(scoreboardFtrSelection);
-				System.err.printf("Done feature selection (iteration %d).%n", iteration);
-			}
-			Vector<Integer> bestFeatures = bestFtr.getFeatures();*/
+			/*
+			 * ModelConfigurationResult bestFtr; {
+			 * Vector<ModelConfigurationResult> scoreboardFtrSelection = new
+			 * Vector<>(); new AblationFeatureSelector(bestwPos, bestwNeg,
+			 * editDistanceThreshold, trainGatherer, develGatherer, optProfile,
+			 * optProfileThreshold, scoreboardFtrSelection) .run(); bestFtr =
+			 * ModelConfigurationResult .findBest(scoreboardFtrSelection,
+			 * optProfile, optProfileThreshold);
+			 * globalScoreboard.addAll(scoreboardFtrSelection);
+			 * System.err.printf("Done feature selection (iteration %d).%n",
+			 * iteration); } Vector<Integer> bestFeatures =
+			 * bestFtr.getFeatures();
+			 */
 			Vector<Integer> bestFeatures = allFtrs;
 			{ // Fine-tune weights
 				Vector<ModelConfigurationResult> scoreboardWeightsTuning = new Vector<>();
 				Pair<Double, Double> weights;
 				try {
 					weights = new WeightSelector(finewPosMin, finewPosMax, -1,
-							finewNegMin, finewNegMax, -1,gamma, C, fineSteps,
+							finewNegMin, finewNegMax, -1, gamma, C, fineSteps,
 							editDistanceThreshold, bestFeatures, trainGatherer,
 							develGatherer, optProfile, scoreboardWeightsTuning)
 							.call();
@@ -195,7 +171,8 @@ public class TuneModel {
 				finewNegMax = bestwNeg * 2.0;
 
 				globalScoreboard.addAll(scoreboardWeightsTuning);
-				System.err.printf("Done weights tuning (iteration %d).%n", iteration);
+				System.err.printf("Done weights tuning (iteration %d).%n",
+						iteration);
 			}
 			ModelConfigurationResult newBest = ModelConfigurationResult
 					.findBest(globalScoreboard, optProfile, optProfileThreshold);
@@ -219,47 +196,45 @@ public class TuneModel {
 		Locale.setDefault(Locale.US);
 		SmaphAnnotatorDebugger.disable();
 		String freebKey = "<FREEBASE_KEY>";
-		String bingKey= "<BING_KEY>";
-		
+		String bingKey = "<BING_KEY>";
+
 		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
 				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
-		FreebaseApi freebApi = new FreebaseApi(
-				freebKey, "freeb.cache");
+		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
 
 		Vector<ModelConfigurationResult> bestEQFModels = new Vector<>();
 		Vector<ModelConfigurationResult> bestEFModels = new Vector<>();
-		int wikiSearchTopK = 5; // 																	<======== mind this
+		int wikiSearchTopK = 5; // <======== mind this
 		double gamma = 1.0;
-		double C=1.0;
+		double C = 1.0;
 		for (double editDistanceThr = 0.7; editDistanceThr <= 0.7; editDistanceThr += 0.1) {
 			WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase(
 					"mapdb");
 
-			BingAnnotator bingAnnotator = GenerateTrainingAndTest
+			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
 					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
 							editDistanceThr, wikiSearchTopK, bingKey);
-			BingAnnotator.setCache("bing.cache.full");
+			SmaphAnnotator.setCache("bing.cache.full");
 
 			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer trainEmptyQueryGatherer = new BinaryExampleGatherer();
 			BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer develEmptyQueryGatherer = new BinaryExampleGatherer();
 			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 					bingAnnotator, trainEntityFilterGatherer,
-					trainEmptyQueryGatherer, develEntityFilterGatherer,
-					develEmptyQueryGatherer, wikiApi, wikiToFreebase, freebApi);
+					develEntityFilterGatherer, wikiApi, wikiToFreebase,
+					freebApi);
 
-			BingAnnotator.unSetCache();
+			SmaphAnnotator.unSetCache();
 
 			Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> modelAndStatsEF = trainIterative(
 					trainEntityFilterGatherer, develEntityFilterGatherer,
 					editDistanceThr, OptimizaionProfiles.MAXIMIZE_MACRO_F1,
-					-1.0,gamma,C);
-/*			Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> modelAndStatsEF = trainIterative(
-					trainEmptyQueryGatherer, develEmptyQueryGatherer,
-					editDistanceThr, OptimizaionProfiles.MAXIMIZE_TN,
-					0.02);
-*/
+					-1.0, gamma, C);
+			/*
+			 * Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult>
+			 * modelAndStatsEF = trainIterative( trainEmptyQueryGatherer,
+			 * develEmptyQueryGatherer, editDistanceThr,
+			 * OptimizaionProfiles.MAXIMIZE_TN, 0.02);
+			 */
 			/*
 			 * for (ModelConfigurationResult res : modelAndStatsEQF.first)
 			 * System.out.println(res.getReadable());
@@ -279,7 +254,7 @@ public class TuneModel {
 
 		System.out.println("Flushing Bing API...");
 
-		BingAnnotator.flush();
+		SmaphAnnotator.flush();
 		wikiApi.flush();
 	}
 
@@ -345,7 +320,8 @@ public class TuneModel {
 				double editDistanceThreshold, Vector<Integer> features,
 				BinaryExampleGatherer trainEQFGatherer,
 				BinaryExampleGatherer testEQFGatherer,
-				OptimizaionProfiles optProfile, double optProfileThreshold, double gamma, double C,
+				OptimizaionProfiles optProfile, double optProfileThreshold,
+				double gamma, double C,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wPos = wPos;
 			this.wNeg = wNeg;
@@ -360,7 +336,7 @@ public class TuneModel {
 		}
 
 		public static MetricsResultSet computeMetrics(svm_model model,
-				Vector<svm_problem> testProblems) throws IOException {
+				List<svm_problem> testProblems) throws IOException {
 			// Compute metrics
 			/*
 			 * { int tp = 0, fp = 0, fn = 0, tn = 0; for (int i = 0; i <
@@ -411,7 +387,7 @@ public class TuneModel {
 					trainProblem, gamma, C);
 
 			// Generate test problem and scale it.
-			Vector<svm_problem> testProblems = getScaledTestProblems(
+			List<svm_problem> testProblems = getScaledTestProblems(
 					this.features, testGatherer, mins, maxs);
 
 			MetricsResultSet metrics = computeMetrics(model, testProblems);
@@ -426,7 +402,7 @@ public class TuneModel {
 
 			ModelConfigurationResult mcr = new ModelConfigurationResult(
 					features, wPos, wNeg, editDistanceThreshold, tp, fp, fn,
-					testGatherer.getFtrVectorCount() - tp - fp - fn, microF1,
+					testGatherer.getExamplesCount() - tp - fp - fn, microF1,
 					macroF1, macroRec, macroPrec);
 
 			synchronized (scoreboard) {
@@ -451,8 +427,9 @@ public class TuneModel {
 		private int steps;
 
 		public WeightSelector(double wPosMin, double wPosMax, double kappaPos,
-				double wNegMin, double wNegMax, double kappaNeg, double gamma, double C, int steps,
-				double editDistanceThreshold, Vector<Integer> features,
+				double wNegMin, double wNegMax, double kappaNeg, double gamma,
+				double C, int steps, double editDistanceThreshold,
+				Vector<Integer> features,
 				BinaryExampleGatherer trainEQFGatherer,
 				BinaryExampleGatherer testEQFGatherer,
 				OptimizaionProfiles optProfile,
@@ -489,7 +466,7 @@ public class TuneModel {
 
 		public static double computeWeight(double wMax, double wMin,
 				double kappa, int iteration, int steps) {
-			if (iteration <0)
+			if (iteration < 0)
 				return wMin;
 			double exp = wMax == wMin ? 1 : Math.log((wMax - wMin) / kappa)
 					/ Math.log(steps);
@@ -520,8 +497,8 @@ public class TuneModel {
 						kappaNeg, negI, steps)) <= wNegMax; negI++)
 					futures.add(execServ.submit(new ParameterTester(wPos, wNeg,
 							editDistanceThreshold, features, trainEQFGatherer,
-							testEQFGatherer, optProfile, optProfileThreshold,gamma, C,
-							scoreboard)));
+							testEQFGatherer, optProfile, optProfileThreshold,
+							gamma, C, scoreboard)));
 
 			ModelConfigurationResult best = null;
 			for (Future<ModelConfigurationResult> future : futures)
@@ -550,8 +527,8 @@ public class TuneModel {
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
-		public AblationFeatureSelector(double wPos, double wNeg, double gamma, double C,
-				double editDistanceThreshold,
+		public AblationFeatureSelector(double wPos, double wNeg, double gamma,
+				double C, double editDistanceThreshold,
 				BinaryExampleGatherer trainEQFGatherer,
 				BinaryExampleGatherer testEQFGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
@@ -577,7 +554,7 @@ public class TuneModel {
 						editDistanceThreshold,
 						SmaphUtils.getAllFtrVect(testGatherer.getFtrCount()),
 						trainGatherer, testGatherer, optProfile,
-						optProfileThreshold,gamma, C, scoreboard).call();
+						optProfileThreshold, gamma, C, scoreboard).call();
 			} catch (Exception e1) {
 				e1.printStackTrace();
 				throw new RuntimeException(e1);
@@ -597,11 +574,12 @@ public class TuneModel {
 
 					try {
 						Future<ModelConfigurationResult> future = execServ
-								.submit(new ParameterTester(wPos, wNeg, 
+								.submit(new ParameterTester(wPos, wNeg,
 										editDistanceThreshold,
 										pickedFtrsIteration, trainGatherer,
 										testGatherer, optProfile,
-										optProfileThreshold,gamma, C, scoreboard));
+										optProfileThreshold, gamma, C,
+										scoreboard));
 						futures.add(future);
 						futureToFtrId.put(future, testFtrId);
 
@@ -642,8 +620,8 @@ public class TuneModel {
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
-		public IncrementalFeatureSelector(double wPos, double wNeg, double gamma, double C,
-				double editDistanceThreshold,
+		public IncrementalFeatureSelector(double wPos, double wNeg,
+				double gamma, double C, double editDistanceThreshold,
 				BinaryExampleGatherer trainEQFGatherer,
 				BinaryExampleGatherer testEQFGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
@@ -686,7 +664,8 @@ public class TuneModel {
 										editDistanceThreshold,
 										pickedFtrsIteration, trainEQFGatherer,
 										testEQFGatherer, optProfile,
-										optProfileThreshold,gamma, C, scoreboard));
+										optProfileThreshold, gamma, C,
+										scoreboard));
 						futures.add(future);
 						futureToFtrId.put(future, testFtrId);
 

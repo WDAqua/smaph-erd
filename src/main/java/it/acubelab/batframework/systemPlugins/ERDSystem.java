@@ -20,6 +20,14 @@ import it.acubelab.batframework.utils.AnnotationException;
 import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 
+/**
+ * An interface to a generic ERD System, as defined in <a
+ * href="http://web-ngram.research.microsoft.com/erd2014/Rules.aspx"
+ * >http://web-ngram.research.microsoft.com/erd2014/Rules.aspx</a>.
+ * 
+ * @author Marco Cornolti
+ * 
+ */
 public class ERDSystem implements C2WSystem {
 	private String url;
 	private String name;
@@ -29,6 +37,18 @@ public class ERDSystem implements C2WSystem {
 	private FreebaseApi freebApi;
 	private WikipediaApiInterface wikiApi;
 
+	/**
+	 * @param url
+	 *            the URL of the ERD system.
+	 * @param run
+	 *            the runID of the ERD system.
+	 * @param name
+	 *            the name of the system.
+	 * @param freebApi
+	 *            an API to Freebase.
+	 * @param wikiApi
+	 *            an API to Wikipedia.
+	 */
 	public ERDSystem(String url, String run, String name, FreebaseApi freebApi,
 			WikipediaApiInterface wikiApi) {
 		this.url = url;
@@ -93,13 +113,10 @@ public class ERDSystem implements C2WSystem {
 				String mid = line.split("\t")[2];
 				String title = freebApi.midToTitle(mid);
 				int wid;
-				if (title==null ||(wid = wikiApi.getIdByTitle(title)) ==-1)
+				if (title == null || (wid = wikiApi.getIdByTitle(title)) == -1)
 					System.err.println("Discarding mid=" + mid);
-				else {
-					//System.out.printf("Found mid=%s title=%s wid=%d%n", mid,
-					//		title, wid);
+				else
 					res.add(new Tag(wid));
-				}
 			}
 
 		} catch (Exception e) {

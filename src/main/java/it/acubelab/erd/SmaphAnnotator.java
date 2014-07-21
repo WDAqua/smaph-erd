@@ -1,65 +1,27 @@
 package it.acubelab.erd;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.Vector;
+import it.acubelab.batframework.data.*;
+import it.acubelab.batframework.problems.Sa2WSystem;
+import it.acubelab.batframework.utils.*;
+import it.acubelab.erd.boldfilters.*;
+import it.acubelab.erd.entityfilters.*;
+import it.acubelab.erd.main.ERDDatasetFilter;
+import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.cnr.isti.hpc.erd.WikipediaToFreebase;
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 
-import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.apache.commons.lang3.tuple.Triple;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-import org.tartarus.snowball.ext.EnglishStemmer;
+import org.json.simple.*;
 import org.xml.sax.SAXException;
 
 import com.sun.org.apache.xml.internal.security.utils.Base64;
 
-import it.acubelab.batframework.data.Annotation;
-import it.acubelab.batframework.data.Mention;
-import it.acubelab.batframework.data.ScoredAnnotation;
-import it.acubelab.batframework.data.ScoredTag;
-import it.acubelab.batframework.data.Tag;
-import it.acubelab.batframework.problems.D2WSystem;
-import it.acubelab.batframework.problems.Sa2WSystem;
-import it.acubelab.batframework.utils.AnnotationException;
-import it.acubelab.batframework.utils.FreebaseApi;
-import it.acubelab.batframework.utils.Pair;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.emptyqueryfilters.EmptyQueryFilter;
-import it.acubelab.erd.emptyqueryfilters.LibSvmEmptyQueryFilter;
-import it.acubelab.erd.emptyqueryfilters.NoEmptyQueryFilter;
-import it.acubelab.erd.entityfilters.EntityFilter;
-import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
-import it.acubelab.erd.entityfilters.NoEntityFilter;
-import it.acubelab.erd.learn.BinaryExampleGatherer;
-import it.acubelab.erd.main.ERDDatasetFilter;
-import it.acubelab.erd.spotfilters.FrequencySpotFilter;
-import it.acubelab.erd.spotfilters.RankWeightSpotFilter;
-import it.acubelab.erd.spotfilters.SpotFilter;
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
-import it.cnr.isti.hpc.erd.WikipediaToFreebase;
-
-public class BingAnnotator implements Sa2WSystem {
+public class SmaphAnnotator implements Sa2WSystem {
 	private static final String WIKI_URL_LEADING = "http://en.wikipedia.org/wiki/";
 	private static final int BING_RETRY = 3;
 	private String bingKey;
@@ -71,55 +33,89 @@ public class BingAnnotator implements Sa2WSystem {
 	private WikipediaApiInterface wikiApi;
 
 	private WikiSenseAnnotatorDevelopment auxDisambiguator;
-	private SpotFilter boldFilter;
+	private BoldFilter boldFilter;
 	private EntityFilter entityFilter;
-	private EmptyQueryFilter emptyQueryFilter;
 	private boolean includeSourceNormalSearch;
 	private boolean includeSourceAnnotator;
-	private boolean includeSourceAnnotatorTopK;
 	private boolean includeSourceWikiSearch;
 	private int topKWikiSearch = 0;
-	private int topKAnnotatorCandidates = 0;
 	private boolean includeSourceRelatedSearch;
 	private int topKRelatedSearch;
+	private SmaphAnnotatorDebugger debugger;
 
-	public BingAnnotator(WikiSenseAnnotatorDevelopment auxDisambiguator,
-			SpotFilter spotManager, WikipediaApiInterface wikiApi, String bingKey) {
-		this(auxDisambiguator, spotManager, new NoEntityFilter(),
-				new NoEmptyQueryFilter(), true, false, false, 0, false, 0,
-				false, 0, wikiApi, bingKey);
-	}
-
-	public BingAnnotator(WikiSenseAnnotatorDevelopment auxDisambiguator,
-			SpotFilter spotManager, EntityFilter entityFilter,
-			EmptyQueryFilter emptyQueryFilter, boolean includeSourceAnnotator,
-			boolean includeSourceNormalSearch, boolean includeSourceWikiSearch,
-			int wikiSearchPages, boolean includeSourceAnnotatorTopK,
-			int topKAnnotatorCandidates, boolean includeRelatedSearch,
-			int topKRelatedSearch, WikipediaApiInterface wikiApi, String bingKey) {
+	/**
+	 * Constructs a SMAPH annotator.
+	 * 
+	 * @param auxDisambiguator
+	 *            the disambiguator used in Source 1.
+	 * @param boldFilter
+	 *            the filter of the bolds used in Source 1.
+	 * @param entityFilter
+	 *            the entity filter used in the second stage.
+	 * @param includeSourceAnnotator
+	 *            true iff Source 1 has to be enabled.
+	 * @param includeSourceNormalSearch
+	 *            true iff Source 2 has to be enabled.
+	 * @param includeSourceWikiSearch
+	 *            true iff Source 3 has to be enabled.
+	 * @param wikiSearchPages
+	 *            Source 3 results limit.
+	 * @param includeRelatedSearch
+	 *            true iff Source 4 has to be enabled.
+	 * @param topKRelatedSearch
+	 *            Source 4 results limit.
+	 * @param wikiApi
+	 *            an API to Wikipedia.
+	 * @param bingKey
+	 *            the key to the Bing API.
+	 */
+	public SmaphAnnotator(WikiSenseAnnotatorDevelopment auxDisambiguator,
+			BoldFilter boldFilter, EntityFilter entityFilter,
+			boolean includeSourceAnnotator, boolean includeSourceNormalSearch,
+			boolean includeSourceWikiSearch, int wikiSearchPages,
+			boolean includeSourceAnnotatorTopK, int topKAnnotatorCandidates,
+			boolean includeRelatedSearch, int topKRelatedSearch,
+			WikipediaApiInterface wikiApi, String bingKey) {
 		this.auxDisambiguator = auxDisambiguator;
-		this.boldFilter = spotManager;
+		this.boldFilter = boldFilter;
 		this.entityFilter = entityFilter;
 		this.wikiApi = wikiApi;
-		this.emptyQueryFilter = emptyQueryFilter;
 		this.includeSourceAnnotator = includeSourceAnnotator;
 		this.includeSourceNormalSearch = includeSourceNormalSearch;
 		this.includeSourceWikiSearch = includeSourceWikiSearch;
-		this.includeSourceAnnotatorTopK = includeSourceAnnotatorTopK;
 		this.topKWikiSearch = wikiSearchPages;
-		this.topKAnnotatorCandidates = topKAnnotatorCandidates;
 		this.includeSourceRelatedSearch = includeRelatedSearch;
 		this.topKRelatedSearch = topKRelatedSearch;
 		this.bingKey = bingKey;
 	}
 
-	public static synchronized void increaseFlushCounter()
+	/**
+	 * Set an optional debugger to gather data about the process of a query.
+	 * 
+	 * @param debugger
+	 *            the debugger.
+	 */
+	public void setDebugger(SmaphAnnotatorDebugger debugger) {
+		this.debugger = debugger;
+	}
+
+	private static synchronized void increaseFlushCounter()
 			throws FileNotFoundException, IOException {
 		flushCounter++;
 		if (flushCounter % FLUSH_EVERY == 0)
 			flush();
 	}
 
+	/**
+	 * Flushes the cache of the Bing api.
+	 * 
+	 * @throws FileNotFoundException
+	 *             if the file exists but is a directory rather than a regular
+	 *             file, does not exist but cannot be created, or cannot be
+	 *             opened for any other reason.
+	 * @throws IOException
+	 *             if an I/O error occurred.
+	 */
 	public static synchronized void flush() throws FileNotFoundException,
 			IOException {
 		if (flushCounter > 0 && resultsCacheFilename != null) {
@@ -140,12 +136,13 @@ public class BingAnnotator implements Sa2WSystem {
 
 	@Override
 	public HashSet<Tag> solveC2W(String text) throws AnnotationException {
-		return null;
+		return ProblemReduction.A2WToC2W(ProblemReduction.Sa2WToA2W(this
+				.solveSa2W(text)));
 	}
 
 	@Override
 	public String getName() {
-		return "Bing annotator";
+		return "Smaph annotator";
 	}
 
 	@Override
@@ -164,17 +161,31 @@ public class BingAnnotator implements Sa2WSystem {
 		return null;
 	}
 
-	private Triple<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>, HashMap<String, List<HashMap<String, Double>>>> solveD2WDisambiguator(
+	/**
+	 * Call the disambiguator and disambiguate the bolds.
+	 * 
+	 * @param text
+	 *            concatenated bolds.
+	 * @param mentions
+	 *            mentions (one per bold).
+	 * @return a triple that has: additional info returned by the annotator for
+	 *         the query as left element; the mapping from bold to annotation as
+	 *         middle element; additional candidates info as right element.
+	 * @throws IOException
+	 * @throws XPathExpressionException
+	 * @throws ParserConfigurationException
+	 * @throws SAXException
+	 */
+	private Pair<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>> disambiguateBolds(
 			String text, HashSet<Mention> mentions) throws IOException,
 			XPathExpressionException, ParserConfigurationException,
 			SAXException {
 		HashSet<Annotation> anns;
 		anns = auxDisambiguator.solveD2W(text, mentions);
 		if (anns == null)
-			return new ImmutableTriple<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>, HashMap<String, List<HashMap<String, Double>>>>(
+			return new Pair<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>>(
 					new HashMap<String, HashMap<String, Double>>(),
-					new HashMap<String, Annotation>(),
-					new HashMap<String, List<HashMap<String, Double>>>());
+					new HashMap<String, Annotation>());
 
 		List<Integer> widsToPrefetch = new Vector<>();
 		for (Annotation ann : anns)
@@ -192,16 +203,13 @@ public class BingAnnotator implements Sa2WSystem {
 			spotToAnnotation.put(
 					text.substring(ann.getPosition(),
 							ann.getPosition() + ann.getLength()), ann);
-		return new ImmutableTriple<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>, HashMap<String, List<HashMap<String, Double>>>>(
-				auxDisambiguator.getLastQueryAdditionalInfo(),
-				spotToAnnotation, additionalCandidatesInfo);
+		return new Pair<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>>(
+				auxDisambiguator.getLastQueryAdditionalInfo(), spotToAnnotation);
 	}
 
 	@Override
 	public HashSet<ScoredAnnotation> solveSa2W(String query)
 			throws AnnotationException {
-		SmaphAnnotatorDebugger.out.printf("*** START :%s ***%n", query);
-
 		HashSet<ScoredAnnotation> taggedEntities = new HashSet<>();
 		try {
 
@@ -213,9 +221,8 @@ public class BingAnnotator implements Sa2WSystem {
 			int resultsCount = -1;
 			double webTotal = Double.NaN;
 			List<String> filteredBolds = null;
-			if (includeSourceAnnotator || includeSourceAnnotatorTopK
-					|| includeSourceWikiSearch || includeSourceRelatedSearch
-					|| includeSourceNormalSearch) {
+			if (includeSourceAnnotator || includeSourceWikiSearch
+					|| includeSourceRelatedSearch || includeSourceNormalSearch) {
 				bingBoldsAndRank = new Vector<>();
 				urls = new Vector<>();
 				relatedSearchRes = new Vector<>();
@@ -236,7 +243,7 @@ public class BingAnnotator implements Sa2WSystem {
 				webTotalWiki = takeBingWikiResults(query, wikiSearchUrls,
 						bingBoldsAndRankWS, topKWikiSearch);
 				HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
-				annTitlesToIdAndRankWS = getTitlesForAnnotator(rankToIdWikiSearch);
+				annTitlesToIdAndRankWS = adjustTitles(rankToIdWikiSearch);
 			}
 
 			/** Do the RelatedSearch on bing */
@@ -254,59 +261,42 @@ public class BingAnnotator implements Sa2WSystem {
 						relatedSearchUrls, bingBoldsAndRankRS,
 						topKRelatedSearch);
 				rankToIdRelatedSearch = urlsToRankID(relatedSearchUrls);
-				annTitlesToIdAndRankRS = getTitlesForAnnotator(rankToIdRelatedSearch);
+				annTitlesToIdAndRankRS = adjustTitles(rankToIdRelatedSearch);
 			}
 
 			/** Annotate bolds on the annotator */
-			Triple<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>, HashMap<String, List<HashMap<String, Double>>>> infoAndAnnotations = null;
+			Pair<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>> infoAndAnnotations = null;
 			HashMap<String, Annotation> spotToAnnotation = null;
 			HashMap<String, HashMap<String, Double>> additionalInfo = null;
-			HashMap<String, List<HashMap<String, Double>>> candidatesInfo = null;
 			Pair<String, HashSet<Mention>> annInput = null;
-			if (includeSourceAnnotator || includeSourceAnnotatorTopK) {
-				annInput = generateAnnotatorInput(filteredBolds, null);
-				infoAndAnnotations = solveD2WDisambiguator(annInput.first,
+			if (includeSourceAnnotator) {
+				annInput = concatenateBolds(filteredBolds);
+				infoAndAnnotations = disambiguateBolds(annInput.first,
 						annInput.second);
-				spotToAnnotation = infoAndAnnotations.getMiddle();
-				additionalInfo = infoAndAnnotations.getLeft();
-				candidatesInfo = infoAndAnnotations.getRight();
+				spotToAnnotation = infoAndAnnotations.second;
+				additionalInfo = infoAndAnnotations.first;
 			}
-
-			HashMap<String, Double> EQFeatures = generateEmptyQueryFeatures(
-					resultsCount, webTotal, bingBoldsAndRank, urls,
-					wikiSearchUrls, webTotalWiki);
-			if (!emptyQueryFilter.filterQuery(EQFeatures))
-				return taggedEntities;
 
 			// Filter and add annotations found by the disambiguator
 			if (includeSourceAnnotator) {
 				for (String bold : filteredBolds) {
 					if (spotToAnnotation.containsKey(bold)) {
 						Annotation ann = spotToAnnotation.get(bold);
-						HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotation(
+						HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotator(
 								query, resultsCount, ann, annInput,
 								bingBoldsAndRank, additionalInfo);
 						if (entityFilter.filterEntity(ESFeatures))
 							taggedEntities.add(new ScoredAnnotation(0, 1, ann
 									.getConcept(), 0));
+						if (debugger != null) {
+							HashSet<String> bolds = new HashSet<>();
+							bolds.add(bold);
+							debugger.addQueryCandidateBolds(query, "Source 1",
+									ann.getConcept(), bolds);
+						}
+
 					}
 				}
-			}
-
-			// Filter and add entities found by the disambiguator, TOP-K
-			if (includeSourceAnnotatorTopK) {
-				for (String mention : candidatesInfo.keySet())
-					for (HashMap<String, Double> candidateData : candidatesInfo
-							.get(mention)) {
-						if (candidateData.get("rank") >= topKAnnotatorCandidates)
-							continue;
-						HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotationCandidates(
-								query, mention, candidateData);
-						Tag tag = new Tag(candidateData.get("id").intValue());
-						if (entityFilter.filterEntity(ESFeatures))
-							taggedEntities.add(new ScoredAnnotation(0, 1, tag
-									.getConcept(), 0));
-					}
 			}
 
 			// Filter and add entities found in the normal search
@@ -318,6 +308,16 @@ public class BingAnnotator implements Sa2WSystem {
 							query, wid, rank, webTotal, webTotalWiki);
 					if (entityFilter.filterEntity(ESFeatures))
 						taggedEntities.add(new ScoredAnnotation(0, 1, wid, 0));
+					if (debugger != null) {
+						HashSet<String> bolds = new HashSet<>();
+						for (Pair<String, Integer> boldRank : bingBoldsAndRank) {
+							if (boldRank.second == rank)
+								bolds.add(boldRank.first);
+						}
+						debugger.addQueryCandidateBolds(query, "Source 2", wid,
+								bolds);
+					}
+
 				}
 			}
 
@@ -332,6 +332,16 @@ public class BingAnnotator implements Sa2WSystem {
 
 					if (entityFilter.filterEntity(ESFeatures))
 						taggedEntities.add(new ScoredAnnotation(0, 1, wid, 0));
+					if (debugger != null) {
+						HashSet<String> bolds = new HashSet<>();
+						for (Pair<String, Integer> boldRank : bingBoldsAndRankWS) {
+							if (boldRank.second == rank)
+								bolds.add(boldRank.first);
+						}
+						debugger.addQueryCandidateBolds(query, "Source 3", wid,
+								bolds);
+					}
+
 				}
 			}
 
@@ -355,36 +365,17 @@ public class BingAnnotator implements Sa2WSystem {
 		}
 		SmaphAnnotatorDebugger.out.printf("*** END :%s ***%n", query);
 
-		
-
 		return taggedEntities;
 
 	}
 
-	private HashMap<String, Double> getCandidateData(
-			HashMap<String, List<HashMap<String, Double>>> candidatesInfoAllCandidatesWS,
-			String title, int wid) {
-		List<HashMap<String, Double>> WSCandidateData = candidatesInfoAllCandidatesWS
-				.get(title);
-		if (WSCandidateData == null) {
-			SmaphAnnotatorDebugger.out
-					.printf("ERROR: annotator did not tag title %s found by Wikisearch.%n",
-							title);
-			return null;
-		}
-		int i = 0;
-		while (i < WSCandidateData.size()
-				&& WSCandidateData.get(i).get("id").intValue() != wid)
-			i++;
-		if (i == WSCandidateData.size()) {
-			SmaphAnnotatorDebugger.out
-					.printf("INFO: page id %d does not appear in the candidates of %s.%n",
-							wid, title);
-			return null;
-		}
-		return WSCandidateData.get(i);
-	}
-
+	/**
+	 * @param relatedSearchRes
+	 *            the related search suggested in the first query to Bing.
+	 * @param query
+	 *            the input query.
+	 * @return the best related search for Source 4.
+	 */
 	private static String getRelatedSearch(List<String> relatedSearchRes,
 			String query) {
 		if (relatedSearchRes.isEmpty())
@@ -414,7 +405,16 @@ public class BingAnnotator implements Sa2WSystem {
 		return newSearch;
 	}
 
-	private HashMap<String, Pair<Integer, Integer>> getTitlesForAnnotator(
+	/**
+	 * Adjust the title of retrieved Wikipedia pages, e.g. removing final
+	 * parenthetical.
+	 * 
+	 * @param rankToIdWS
+	 *            a mapping from a rank (position in the search engine result)
+	 *            to the Wikipedia ID of the page in that rank.
+	 * @return a mapping from adjusted titles to a pair <wid, rank>
+	 */
+	private HashMap<String, Pair<Integer, Integer>> adjustTitles(
 			HashMap<Integer, Integer> rankToIdWS) {
 		HashMap<String, Pair<Integer, Integer>> res = new HashMap<>();
 		for (int rank : rankToIdWS.keySet()) {
@@ -434,33 +434,31 @@ public class BingAnnotator implements Sa2WSystem {
 		return res;
 	}
 
-	private static Pair<String, HashSet<Mention>> generateAnnotatorInput(
-			List<String> spots, Set<String> titlesWS) {
-		Vector<String> allSpots = new Vector<>();
-		/*
-		 * HashSet<String> insertedStems = new HashSet<>(); EnglishStemmer
-		 * stemmer = new EnglishStemmer(); for (String spot : spots) { String
-		 * stemmedString = SmaphUtils.stemString(spot, stemmer) .toLowerCase();
-		 * if (insertedStems.contains(stemmedString)) continue;
-		 * insertedStems.add(stemmedString); allSpots.add(spot); }
-		 */
-		allSpots.addAll(spots);
-
-		if (titlesWS != null)
-			allSpots.addAll(titlesWS);
+	/**
+	 * Concatenates the bolds passed by argument.
+	 * 
+	 * @param bolds
+	 * @return the list of concatenated bolds and the set of their mentions.
+	 */
+	private static Pair<String, HashSet<Mention>> concatenateBolds(
+			List<String> bolds) {
 		HashSet<Mention> mentions = new HashSet<Mention>();
 		String concat = "";
-		for (String spot : allSpots) {
+		for (String spot : bolds) {
 			int mentionStart = concat.length();
 			int mentionEnd = mentionStart + spot.length() - 1;
 			mentions.add(new Mention(mentionStart, mentionEnd - mentionStart
 					+ 1));
 			concat += spot + " ";
-			// System.out.printf("%s %d %d%n",concat, mentionStart, mentionEnd);
 		}
 		return new Pair<String, HashSet<Mention>>(concat, mentions);
 	}
 
+	/**
+	 * @param bingReply
+	 *            Bing's reply.
+	 * @return whether the query to bing failed and has to be re-issued.
+	 */
 	private static boolean recacheNeeded(JSONObject bingReply) {
 		if (bingReply == null)
 			return true;
@@ -479,36 +477,44 @@ public class BingAnnotator implements Sa2WSystem {
 		return false;
 	}
 
+	/**
+	 * Query bing, extract the Wikipedia results.
+	 * 
+	 * @param query
+	 *            the query.
+	 * @param result
+	 *            where to store results.
+	 * @param bingBoldsAndRankWS
+	 *            where to store information about the bolds.
+	 * @param topk
+	 *            limit to top-k results.
+	 * @return the total number of pages found by the Search engine.
+	 * @throws Exception
+	 *             if the query to Bing failed.
+	 */
 	private double takeBingWikiResults(String query, List<String> result,
 			List<Pair<String, Integer>> bingBoldsAndRankWS, int topk)
 			throws Exception {
 		if (!bingBoldsAndRankWS.isEmpty())
-			throw new RuntimeException("result must be empty");
-
+			throw new RuntimeException("bingBoldsAndRankWS must be empty");
 		if (!result.isEmpty())
 			throw new RuntimeException("result must be empty");
-		SmaphAnnotatorDebugger.out
-				.println("*** Taking Bing results with +wikipedia ***");
 		JSONObject bingReply = queryBing(query + " wikipedia", BING_RETRY);
 		JSONObject data = (JSONObject) bingReply.get("d");
 		JSONObject results = (JSONObject) ((JSONArray) data.get("results"))
 				.get(0);
 		JSONArray webResults = (JSONArray) results.get("Web");
 		double webTotal = new Double((String) results.get("WebTotal"));
-
-		for (int i = 0; i < Math.min(webResults.size(), topk); i++) {
-			JSONObject resI = (JSONObject) webResults.get(i);
-			String descI = (String) resI.get("Description");
-			String url = (String) resI.get("Url");
-			result.add(url);
-			addBolds(bingBoldsAndRankWS, descI, i);
-		}
-
-		SmaphAnnotatorDebugger.out.println("Wiki WebTotal:" + webTotal);
-
+		getBoldsAndUrls(webResults, topk, bingBoldsAndRankWS, result);
 		return webTotal;
 	}
 
+	/**
+	 * Turns a Wikipedia URL to the title of the Wikipedia page.
+	 * 
+	 * @param encodedWikiUrl
+	 * @return a Wikipedia title, or null if the url is not a Wikipedia page.
+	 */
 	private static String decodeWikiUrl(String encodedWikiUrl) {
 		if (!encodedWikiUrl.matches("^" + WIKI_URL_LEADING + ".*")) {
 			return null;
@@ -520,7 +526,6 @@ public class BingAnnotator implements Sa2WSystem {
 			if (!SmaphUtils.acceptWikipediaTitle(title))
 				return null;
 			SmaphAnnotatorDebugger.disable();
-			System.out.println("Accepting Wikipedia page: " + title);
 			return title;
 
 		} catch (IllegalArgumentException | UnsupportedEncodingException e) {
@@ -530,33 +535,71 @@ public class BingAnnotator implements Sa2WSystem {
 
 	}
 
-	private static void addBolds(List<Pair<String, Integer>> boldsAndRanks,
-			String snippets, int rank) {
-		byte[] startByte = new byte[] { (byte) 0xee, (byte) 0x80, (byte) 0x80 };
-		byte[] stopByte = new byte[] { (byte) 0xee, (byte) 0x80, (byte) 0x81 };
-		String start = new String(startByte);
-		String stop = new String(stopByte);
-		// System.out.println(descI);
-		snippets = snippets.replaceAll(stop + "." + start, " ");
-		// System.out.println(descI);
-		int startIdx = snippets.indexOf(start);
-		int stopIdx = snippets.indexOf(stop, startIdx);
-		while (startIdx != -1 && stopIdx != -1) {
-			String spot = snippets.subSequence(startIdx + 1, stopIdx)
-					.toString();
-			boldsAndRanks.add(new Pair<String, Integer>(spot, rank));
-			SmaphAnnotatorDebugger.out.printf("Rank:%d Bold:%s%n", rank, spot);
-			// System.out.printf("%d %d %s%n", startIdx+1, stopIdx, spot);
-			startIdx = snippets.indexOf(start, startIdx + 1);
-			stopIdx = snippets.indexOf(stop, startIdx + 1);
+	/**
+	 * From the bing results extract the bolds and the urls.
+	 * 
+	 * @param webResults
+	 *            the web results returned by Bing.
+	 * @param topk
+	 *            limit the extraction to the first topk results.
+	 * @param boldsAndRanks
+	 *            storage for the bolds and their rank.
+	 * @param urls
+	 *            storage for the result URLs.
+	 */
+	private static void getBoldsAndUrls(JSONArray webResults, double topk,
+			List<Pair<String, Integer>> boldsAndRanks, List<String> urls) {
+		for (int i = 0; i < Math.min(webResults.size(), topk); i++) {
+			JSONObject resI = (JSONObject) webResults.get(i);
+			String descI = (String) resI.get("Description");
+			String url = (String) resI.get("Url");
+			urls.add(url);
+
+			byte[] startByte = new byte[] { (byte) 0xee, (byte) 0x80,
+					(byte) 0x80 };
+			byte[] stopByte = new byte[] { (byte) 0xee, (byte) 0x80,
+					(byte) 0x81 };
+			String start = new String(startByte);
+			String stop = new String(stopByte);
+			descI = descI.replaceAll(stop + "." + start, " ");
+			int startIdx = descI.indexOf(start);
+			int stopIdx = descI.indexOf(stop, startIdx);
+			while (startIdx != -1 && stopIdx != -1) {
+				String spot = descI.subSequence(startIdx + 1, stopIdx)
+						.toString();
+				boldsAndRanks.add(new Pair<String, Integer>(spot, i));
+				SmaphAnnotatorDebugger.out.printf("Rank:%d Bold:%s%n", i, spot);
+				startIdx = descI.indexOf(start, startIdx + 1);
+				stopIdx = descI.indexOf(stop, startIdx + 1);
+			}
 		}
 	}
 
+	/**
+	 * Issue a query to Bing and extract the result.
+	 * 
+	 * @param query
+	 *            the query to be issued to Bing
+	 * @param boldsAndRanks
+	 *            storage for the bolds (a pair <bold, rank> means bold appeared
+	 *            in the snippets of the result in position rank)
+	 * @param urls
+	 *            storage for the urls found by Bing.
+	 * @param relatedSearch
+	 *            storage for the "related search" suggestions.
+	 * @return a pair <results, webTotal> where results is the number of results
+	 *         returned by Bing, and webTotal is the number of pages found by
+	 *         Bing.
+	 * @throws Exception
+	 *             if something went wrong while querying Bing.
+	 */
 	private Pair<Integer, Double> takeBingData(String query,
-			List<Pair<String, Integer>> result, List<String> urls,
+			List<Pair<String, Integer>> boldsAndRanks, List<String> urls,
 			List<String> relatedSearch) throws Exception {
-		if (!result.isEmpty())
+		if (!boldsAndRanks.isEmpty())
 			throw new RuntimeException("result must be empty");
+		if (!urls.isEmpty())
+			throw new RuntimeException("urls must be empty");
 		JSONObject bingReply = queryBing(query, BING_RETRY);
 		JSONObject data = (JSONObject) bingReply.get("d");
 		JSONObject results = (JSONObject) ((JSONArray) data.get("results"))
@@ -564,15 +607,8 @@ public class BingAnnotator implements Sa2WSystem {
 		JSONArray webResults = (JSONArray) results.get("Web");
 		double webTotal = new Double((String) results.get("WebTotal"));
 
-		SmaphAnnotatorDebugger.out.println("*** Take Bing bolds ***");
-		for (int i = 0; i < webResults.size(); i++) {
-			JSONObject resI = (JSONObject) webResults.get(i);
-			String descI = (String) resI.get("Description");
-			String url = (String) resI.get("Url");
-			urls.add(url);
-			SmaphAnnotatorDebugger.out.printf("Rank:%d URL=%s%n", i, url);
-			addBolds(result, descI, i);
-		}
+		getBoldsAndUrls(webResults, Double.MAX_VALUE, boldsAndRanks, urls);
+
 		JSONArray relatedSearchResults = (JSONArray) results
 				.get("RelatedSearch");
 		for (int i = 0; i < relatedSearchResults.size(); i++) {
@@ -581,11 +617,21 @@ public class BingAnnotator implements Sa2WSystem {
 			relatedSearch.add(rsI);
 		}
 
-		SmaphAnnotatorDebugger.out.printf("WebResults:%d WebTotal:%.0f%n",
-				webResults.size(), webTotal);
 		return new Pair<Integer, Double>(webResults.size(), webTotal);
 	}
 
+	/**
+	 * Issue the query to bing, return the json object.
+	 * 
+	 * @param query
+	 *            the query.
+	 * @param retryLeft
+	 *            how many retry left we have (if zero, will return an empty
+	 *            object in case of failure).
+	 * @return the JSON object as returned by the Bing Api.
+	 * @throws Exception
+	 *             is the call to the API failed.
+	 */
 	private synchronized JSONObject queryBing(String query, int retryLeft)
 			throws Exception {
 		boolean forceCacheOverride = retryLeft < BING_RETRY;
@@ -641,6 +687,18 @@ public class BingAnnotator implements Sa2WSystem {
 		return url2jsonCache.get(url.toExternalForm());
 	}
 
+	/**
+	 * Set the file to which the Bing responses cache is bound.
+	 * 
+	 * @param cacheFilename
+	 *            the cache file name.
+	 * @throws FileNotFoundException
+	 *             if the file could not be open for reading.
+	 * @throws IOException
+	 *             if something went wrong while reading the file.
+	 * @throws ClassNotFoundException
+	 *             is the file contained an object of the wrong class.
+	 */
 	public static void setCache(String cacheFilename)
 			throws FileNotFoundException, IOException, ClassNotFoundException {
 		System.out.println("Loading bing cache...");
@@ -653,11 +711,23 @@ public class BingAnnotator implements Sa2WSystem {
 		}
 	}
 
+	/**
+	 * Clear the Bing response cache and call the garbage collector.
+	 */
 	public static void unSetCache() {
-		url2jsonCache = null;
+		url2jsonCache = new HashMap<>();
 		System.gc();
 	}
 
+	/**
+	 * Given a list of urls, creates a mapping from the url position to the
+	 * Wikipedia page ID of that URL. If an url is not a Wikipedia url, no
+	 * mapping is added.
+	 * 
+	 * @param urls
+	 *            a list of urls.
+	 * @return a mapping from position to Wikipedia page IDs.
+	 */
 	private HashMap<Integer, Integer> urlsToRankID(List<String> urls) {
 		HashMap<Integer, Integer> result = new HashMap<>();
 		HashMap<Integer, String> rankToTitle = new HashMap<>();
@@ -693,82 +763,25 @@ public class BingAnnotator implements Sa2WSystem {
 		return result;
 	}
 
-	private HashMap<String, Double> generateEmptyQueryFeatures(
-			int resultsCount, double webTotal,
-			List<Pair<String, Integer>> bingBolds, List<String> urls,
-			List<String> wikiSearchPages, double webTotalWiki) {
-		SmaphAnnotatorDebugger.out
-				.println("*** Generating EmptyQuery features ***");
-
-		// Process URLS
-		List<Integer> wikiPositions = new Vector<>();
-		for (int i = 0; i < urls.size(); i++) {
-			String url = urls.get(i);
-			if (url.startsWith(WIKI_URL_LEADING))
-				wikiPositions.add(i);
-		}
-
-		double wikiCount = wikiPositions.size();
-		double wikiFreq = resultsCount == 0 ? 0 : ((double) wikiPositions
-				.size()) / resultsCount;
-		double avgWikiRank = RankWeightSpotFilter.computeAvgRank(wikiPositions,
-				resultsCount);
-
-		// Process Bing bolds
-		double minFreq = 1;
-		double maxFreq = 0;
-		double avgFreq = 0;
-
-		double minAvgRank = 1;
-		double maxAvgRank = 0;
-		double avgAvgRank = 0;
-
-		HashSet<String> seenBolds = new HashSet<>();
-		for (Pair<String, Integer> boldAndPos : bingBolds) {
-			String bold = boldAndPos.first.toLowerCase();
-			if (seenBolds.contains(bold))
-				continue;
-			seenBolds.add(bold);
-			double freq = FrequencySpotFilter.getFrequency(bingBolds, bold,
-					resultsCount);
-			double avgRank = RankWeightSpotFilter.getAvgRank(bingBolds, bold,
-					resultsCount);
-			minFreq = Math.min(minFreq, freq);
-			maxFreq = Math.max(maxFreq, freq);
-			avgFreq += freq;
-			minAvgRank = Math.min(minAvgRank, avgRank);
-			maxAvgRank = Math.max(maxAvgRank, avgRank);
-			avgAvgRank += avgRank;
-		}
-
-		if (!seenBolds.isEmpty()) {
-			avgFreq /= seenBolds.size();
-			avgAvgRank /= seenBolds.size();
-		} else {
-			avgFreq = 0.5f;
-			avgAvgRank = 0.5f;
-		}
-
-		HashMap<String, Double> res = new HashMap<>();
-		res.put("webTotal", (double) webTotal);
-		res.put("minAvgRank", minAvgRank);
-		res.put("maxAvgRank", maxAvgRank);
-		res.put("avgAvgRank", avgAvgRank);
-		res.put("minFreq", minFreq);
-		res.put("maxFreq", maxFreq);
-		res.put("avgFreq", avgFreq);
-		res.put("avgWikiRank", avgWikiRank);
-		res.put("wikiFreq", wikiFreq);
-		res.put("wikiCount", wikiCount);
-		res.put("webTotalWiki", (double) webTotalWiki);
-
-		for (String key : res.keySet())
-			SmaphAnnotatorDebugger.out.printf("%s: %f", key, res.get(key));
-
-		return res;
-	}
-
-	private HashMap<String, Double> generateEntitySelectionFeaturesAnnotation(
+	/**
+	 * Generates the Entity Selection features for an entity drawn from Source 1
+	 * (Annotator)
+	 * 
+	 * @param query
+	 *            the query that has been issued to Bing.
+	 * @param resultsCount
+	 *            the number of results contained in the Bing response.
+	 * @param ann
+	 *            the annotation from which the URL is extracted.
+	 * @param annInput
+	 *            the input that has been passed to the auxiliary annotator.
+	 * @param bingBolds
+	 *            the list of bolds spotted by Bing plus their position.
+	 * @param additionalInfo
+	 *            additional info returned by the annotator.
+	 * @return a mapping between feature name and its value.
+	 */
+	private HashMap<String, Double> generateEntitySelectionFeaturesAnnotator(
 			String query, int resultsCount, Annotation ann,
 			Pair<String, HashSet<Mention>> annInput,
 			List<Pair<String, Integer>> bingBolds,
@@ -779,9 +792,9 @@ public class BingAnnotator implements Sa2WSystem {
 				ann.getPosition() + ann.getLength());
 		result.put("is_s1", 1.0);
 		result.put("s1_freq",
-				FrequencySpotFilter.getFrequency(bingBolds, bold, resultsCount));
+				FrequencyBoldFilter.getFrequency(bingBolds, bold, resultsCount));
 		result.put("s1_avgRank",
-				RankWeightSpotFilter.getAvgRank(bingBolds, bold, resultsCount));
+				RankWeightBoldFilter.getAvgRank(bingBolds, bold, resultsCount));
 
 		result.put("s1_editDistance", SmaphUtils.getMinEditDist(query, bold));
 
@@ -793,6 +806,22 @@ public class BingAnnotator implements Sa2WSystem {
 
 	}
 
+	/**
+	 * Generates the Entity Selection features for an entity drawn from Source 2
+	 * (Normal Search)
+	 * 
+	 * @param query
+	 *            the query that has been issued to Bing.
+	 * @param wid
+	 *            the Wikipedia page ID of the entity.
+	 * @param rank
+	 *            the position in which the entity appeared in the Bing results.
+	 * @param webTotalWiki
+	 *            total web results found by Bing for the Wikisearch.
+	 * @param webTotal
+	 *            total web results found by Bing for the normal search.
+	 * @return a mapping between feature name and its value.
+	 */
 	private HashMap<String, Double> generateEntitySelectionFeaturesNormalSearch(
 			String query, int wid, int rank, double webTotalWiki,
 			double webTotal) {
@@ -812,6 +841,23 @@ public class BingAnnotator implements Sa2WSystem {
 
 	}
 
+	/**
+	 * Generates the Entity Selection features for an entity drawn from Source 2
+	 * (Normal Search)
+	 * 
+	 * @param query
+	 *            the query that has been issued to Bing.
+	 * @param wid
+	 *            the Wikipedia page ID of the entity.
+	 * @param rank
+	 *            the position in which the entity appeared in the Bing results.
+	 * @param wikiWebTotal
+	 *            total web results found by Bing for the Wikisearch.
+	 * @param bingBoldsWS
+	 * @param source
+	 *            Source id (3 for WikiSearch)
+	 * @return a mapping between feature name and its value.
+	 */
 	private HashMap<String, Double> generateEntitySelectionFeaturesWikiSearch(
 			String query, int wid, int rank, double wikiWebTotal,
 			List<Pair<String, Integer>> bingBoldsWS, int source) {
@@ -856,28 +902,31 @@ public class BingAnnotator implements Sa2WSystem {
 		return result;
 	}
 
-	private HashMap<String, Double> generateEntitySelectionFeaturesAnnotationCandidates(
-			String query, String mention, HashMap<String, Double> candidateData) {
-		HashMap<String, Double> result = new HashMap<>();
-		result.put("is_s4", 1.0);
-		try {
-			result.put("s4_editDistance", SmaphUtils.getMinEditDist(query,
-					wikiApi.getTitlebyId(candidateData.get("id").intValue())));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-
-		// Add additional info like rho, commonness, etc.
-		for (String key : candidateData.keySet())
-			result.put("s4_" + key, candidateData.get(key));
-
-		return result;
-	}
-
+	/**
+	 * Given a query and its gold standard, generate
+	 * 
+	 * @param query
+	 *            a query.
+	 * @param goldStandard
+	 *            the entities associated to the query.
+	 * @param posEFVectors
+	 *            where to store the positive-example (true positives) feature
+	 *            vectors.
+	 * @param negEFVectors
+	 *            where to store the negative-example (false positives) feature
+	 *            vectors.
+	 * @param discardNE
+	 *            whether to limit the output to named entities, as defined by
+	 *            ERDDatasetFilter.EntityIsNE.
+	 * @param wikiToFreeb
+	 *            a wikipedia to freebase-id mapping.
+	 * @throws Exception
+	 *             if something went wrong while annotating the query.
+	 */
 	public void generateExamples(String query, HashSet<Tag> goldStandard,
 			Vector<double[]> posEFVectors, Vector<double[]> negEFVectors,
-			Vector<double[]> posEQFVectors, Vector<double[]> negEQFVectors,
-			boolean discardNE, WikipediaToFreebase wikiToFreeb) throws Exception {
+			boolean discardNE, WikipediaToFreebase wikiToFreeb)
+			throws Exception {
 
 		/** Search the query on bing */
 		List<Pair<String, Integer>> bingBoldsAndRank = null;
@@ -887,9 +936,8 @@ public class BingAnnotator implements Sa2WSystem {
 		int resultsCount = -1;
 		double webTotal = Double.NaN;
 		List<String> filteredBolds = null;
-		if (includeSourceAnnotator || includeSourceAnnotatorTopK
-				|| includeSourceWikiSearch || includeSourceRelatedSearch
-				|| includeSourceNormalSearch) {
+		if (includeSourceAnnotator || includeSourceWikiSearch
+				|| includeSourceRelatedSearch || includeSourceNormalSearch) {
 			bingBoldsAndRank = new Vector<>();
 			urls = new Vector<>();
 			relatedSearchRes = new Vector<>();
@@ -910,7 +958,7 @@ public class BingAnnotator implements Sa2WSystem {
 			webTotalWiki = takeBingWikiResults(query, wikiSearchUrls,
 					bingBoldsAndRankWS, topKWikiSearch);
 			HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
-			annTitlesToIdAndRankWS = getTitlesForAnnotator(rankToIdWikiSearch);
+			annTitlesToIdAndRankWS = adjustTitles(rankToIdWikiSearch);
 		}
 
 		/** Do the RelatedSearch on bing */
@@ -927,22 +975,20 @@ public class BingAnnotator implements Sa2WSystem {
 			webTotalRelatedSearch = takeBingWikiResults(relatedSearch,
 					relatedSearchUrls, bingBoldsAndRankRS, topKRelatedSearch);
 			rankToIdRelatedSearch = urlsToRankID(relatedSearchUrls);
-			annTitlesToIdAndRankRS = getTitlesForAnnotator(rankToIdRelatedSearch);
+			annTitlesToIdAndRankRS = adjustTitles(rankToIdRelatedSearch);
 		}
 
 		/** Annotate bolds on the annotator */
-		Triple<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>, HashMap<String, List<HashMap<String, Double>>>> infoAndAnnotations = null;
+		Pair<HashMap<String, HashMap<String, Double>>, HashMap<String, Annotation>> infoAndAnnotations = null;
 		HashMap<String, Annotation> spotToAnnotation = null;
 		HashMap<String, HashMap<String, Double>> additionalInfo = null;
-		HashMap<String, List<HashMap<String, Double>>> candidatesInfo = null;
 		Pair<String, HashSet<Mention>> annInput = null;
-		if (includeSourceAnnotator || includeSourceAnnotatorTopK) {
-			annInput = generateAnnotatorInput(filteredBolds, null);
-			infoAndAnnotations = solveD2WDisambiguator(annInput.first,
+		if (includeSourceAnnotator) {
+			annInput = concatenateBolds(filteredBolds);
+			infoAndAnnotations = disambiguateBolds(annInput.first,
 					annInput.second);
-			spotToAnnotation = infoAndAnnotations.getMiddle();
-			additionalInfo = infoAndAnnotations.getLeft();
-			candidatesInfo = infoAndAnnotations.getRight();
+			spotToAnnotation = infoAndAnnotations.second;
+			additionalInfo = infoAndAnnotations.first;
 		}
 
 		List<Pair<Tag, HashMap<String, Double>>> widToEFFtrVect = new Vector<>();
@@ -951,7 +997,7 @@ public class BingAnnotator implements Sa2WSystem {
 			for (String bold : filteredBolds) {
 				if (spotToAnnotation.containsKey(bold)) {
 					Annotation ann = spotToAnnotation.get(bold);
-					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotation(
+					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotator(
 							query, resultsCount, ann, annInput,
 							bingBoldsAndRank, additionalInfo);
 					Tag tag = new Tag(ann.getConcept());
@@ -959,19 +1005,6 @@ public class BingAnnotator implements Sa2WSystem {
 							tag, ESFeatures));
 				}
 			}
-		}
-
-		// Filter and add entities found by the disambiguator, TOP-K
-		if (includeSourceAnnotatorTopK) {
-			for (String mention : candidatesInfo.keySet())
-				for (HashMap<String, Double> candidateData : candidatesInfo
-						.get(mention)) {
-					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotationCandidates(
-							query, mention, candidateData);
-					Tag tag = new Tag(candidateData.get("id").intValue());
-					widToEFFtrVect.add(new Pair<Tag, HashMap<String, Double>>(
-							tag, ESFeatures));
-				}
 		}
 
 		// Filter and add entities found in the normal search
@@ -1033,27 +1066,6 @@ public class BingAnnotator implements Sa2WSystem {
 			System.out.printf("%d in query [%s] is a %s example.%n", tag
 					.getConcept(), query,
 					goldStandard.contains(tag) ? "positive" : "negative");
-		}
-
-		// Add EQF features.
-		{
-			HashMap<String, Double> featuresEmptyQuery = generateEmptyQueryFeatures(
-					resultsCount, webTotal, bingBoldsAndRank, urls,
-					wikiSearchUrls, webTotalWiki);
-
-			if (!goldStandard.isEmpty())
-				posEQFVectors.add(LibSvmEmptyQueryFilter
-						.featuresToFtrVectStatic(featuresEmptyQuery));
-			else
-				negEQFVectors.add(LibSvmEmptyQueryFilter
-						.featuresToFtrVectStatic(featuresEmptyQuery));
-			System.out
-					.printf("query [%s] annotations=%.0f webTotal=%.0f minAvgRank=%.3f maxFreq=%.3f is a %s example.%n",
-							query, featuresEmptyQuery.get("annotations"),
-							featuresEmptyQuery.get("webTotal"),
-							featuresEmptyQuery.get("minAvgRank"),
-							featuresEmptyQuery.get("maxFreq"),
-							!goldStandard.isEmpty() ? "positive" : "negative");
 		}
 	}
 

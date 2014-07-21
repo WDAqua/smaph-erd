@@ -54,9 +54,10 @@ public class SMAPHDataset implements A2WDataset {
 					Mention men = new Mention(pos, len);
 					mentionToTitles.put(men, new Vector<String>());
 					NamedNodeMap attrs = instElemNode.getAttributes();
-					int h=0;
+					int h = 0;
 					Node n = null;
-					while ((n = attrs.getNamedItem(String.format("rank_%d_title", h))) != null){
+					while ((n = attrs.getNamedItem(String.format(
+							"rank_%d_title", h))) != null) {
 						mentionToTitles.get(men).add(n.getTextContent());
 						h++;
 					}

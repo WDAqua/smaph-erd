@@ -1,4 +1,4 @@
-package it.acubelab.erd.spotfilters;
+package it.acubelab.erd.boldfilters;
 
 import it.acubelab.batframework.utils.Pair;
 import it.acubelab.erd.SmaphAnnotatorDebugger;
@@ -8,10 +8,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Vector;
 
-public class EditDistanceSpotFilter implements SpotFilter {
+/**
+ * A filter that filters out all bolds that have an edit distance higher than the threshold.
+ */
+public class EditDistanceBoldFilter implements BoldFilter {
 	private double threshold;
 
-	public EditDistanceSpotFilter(double threshold) {
+	public EditDistanceBoldFilter(double threshold) {
 		this.threshold = threshold;
 	}
 

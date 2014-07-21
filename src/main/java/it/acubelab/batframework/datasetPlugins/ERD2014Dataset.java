@@ -55,7 +55,7 @@ public class ERD2014Dataset implements A2WDataset {
 
 	@Override
 	public String getName() {
-		return "ERD2014 - 100queries";
+		return "ERD2014";
 	}
 
 	@Override

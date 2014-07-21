@@ -4,4 +4,8 @@
         <setting name="bing">
                 <param name="key" value="KEY" />
         </setting>
+	<setting name="tagme">
+		<param name="host" value="tagme.di.unipi.it/tag"/>
+                <param name="key" value="KEY" />
+        </setting>
 </smaph>

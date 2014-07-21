@@ -1,18 +1,17 @@
-package it.acubelab.erd.spotfilters;
+package it.acubelab.erd.boldfilters;
 
 import it.acubelab.batframework.utils.Pair;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
 import it.acubelab.erd.SmaphUtils;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
-public class RankWeightSpotFilter implements SpotFilter {
+/**
+ * A filter that filters out all bolds that have an edit distance higher than the threshold.
+ */
+public class RankWeightBoldFilter implements BoldFilter {
 	private float maxSpotScore;
 
-	public RankWeightSpotFilter(float maxSpotScore) {
+	public RankWeightBoldFilter(float maxSpotScore) {
 		this.maxSpotScore = maxSpotScore;
 	}
 
@@ -26,11 +25,8 @@ public class RankWeightSpotFilter implements SpotFilter {
 		List<String> result = new Vector<>();
 		for (String spot : spots) {
 			double avg = getAvgRank(resultsCount, positions, spot);
-			if (avg <= this.maxSpotScore) {
+			if (avg <= this.maxSpotScore)
 				result.add(spot);
-				SmaphAnnotatorDebugger.out.printf("Accepting %s -> %f%n", spot, avg);
-			} else
-				SmaphAnnotatorDebugger.out.printf("Discarding %s -> %f%n", spot, avg);
 		}
 		return result;
 	}
