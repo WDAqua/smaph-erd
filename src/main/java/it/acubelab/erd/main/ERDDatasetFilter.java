@@ -16,21 +16,16 @@
 
 package it.acubelab.erd.main;
 
+import it.acubelab.batframework.data.*;
+import it.acubelab.batframework.problems.A2WDataset;
+import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.acubelab.erd.SmaphAnnotatorDebugger;
+import it.cnr.isti.hpc.erd.WikipediaToFreebase;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Vector;
-
-import it.acubelab.batframework.data.Annotation;
-import it.acubelab.batframework.data.Mention;
-import it.acubelab.batframework.data.Tag;
-import it.acubelab.batframework.problems.A2WDataset;
-import it.acubelab.batframework.problems.C2WDataset;
-import it.acubelab.batframework.problems.D2WDataset;
-import it.acubelab.batframework.utils.FreebaseApi;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
-import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 public class ERDDatasetFilter implements A2WDataset {
 	private List<HashSet<Tag>> ERDTopics;

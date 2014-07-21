@@ -18,15 +18,10 @@ package it.acubelab.erd.learn;
 
 import it.acubelab.erd.SmaphUtils;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Vector;
+import java.io.*;
+import java.util.*;
 
-import libsvm.svm_node;
-import libsvm.svm_problem;
+import libsvm.*;
 
 /**
  * A gatherer of examples for a binary classifier. An example is a pair

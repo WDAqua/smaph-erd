@@ -20,7 +20,6 @@ import java.util.HashSet;
 import java.util.List;
 
 import it.acubelab.batframework.metrics.MatchRelation;
-import it.acubelab.batframework.utils.Pair;
 
 public class IndexMatch implements MatchRelation<Integer> {
 

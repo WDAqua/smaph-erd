@@ -19,8 +19,7 @@ package it.acubelab.erd.entityfilters;
 import it.acubelab.erd.SmaphAnnotatorDebugger;
 import it.acubelab.erd.learn.LibSvmFilter;
 
-import java.io.*;
-import java.nio.channels.Pipe.SourceChannel;
+import java.io.IOException;
 import java.util.HashMap;
 
 /**
