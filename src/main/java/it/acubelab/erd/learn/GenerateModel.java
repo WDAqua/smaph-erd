@@ -36,7 +36,6 @@ public class GenerateModel {
 
 	public static void main(String[] args) throws Exception {
 		Locale.setDefault(Locale.US);
-		SmaphAnnotatorDebugger.activate();
 		String freebKey = "<FREEBASE_KEY>";
 		String bingKey = "<BING_KEY>";
 		WikipediaApiInterface wikiApi = new WikipediaApiInterface(

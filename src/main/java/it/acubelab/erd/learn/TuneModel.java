@@ -210,7 +210,6 @@ public class TuneModel {
 
 	public static void main(String[] args) throws Exception {
 		Locale.setDefault(Locale.US);
-		SmaphAnnotatorDebugger.disable();
 		String freebKey = "<FREEBASE_KEY>";
 		String bingKey = "<BING_KEY>";
 

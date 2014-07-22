@@ -19,6 +19,7 @@ package it.cnr.isti.hpc.erd.rest;
 import it.acubelab.batframework.data.ScoredAnnotation;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.erd.SmaphAnnotator;
+import it.acubelab.erd.SmaphAnnotatorDebugger;
 import it.acubelab.erd.SmaphConfig;
 import it.acubelab.erd.boldfilters.EditDistanceBoldFilter;
 import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
@@ -81,6 +82,48 @@ public class RestService {
 		return sb.toString();
 	}
 
+	@GET
+	@Path("/debug")
+	@Produces({ MediaType.APPLICATION_JSON })
+	public String debugSmaph(@QueryParam("Text") String text) {
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		String bingKey = SmaphConfig.getDefaultBingKey();
+		WikipediaApiInterface wikiApi;
+		try {
+			wikiApi = new WikipediaApiInterface("wid.cache", "redirect.cache");
+		} catch (ClassNotFoundException | IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		String modelBase = "models/model_1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25_3.80000_6.00000_0.700_0.03000000_5.00000000_ANW";
+		WikiSenseAnnotatorDevelopment auxAnnotatorService = new WikiSenseAnnotatorDevelopment(
+				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
+				"0", false, false, false);
+
+		SmaphAnnotator ann = null;
+		try {
+			ann = new SmaphAnnotator(auxAnnotatorService,
+					new EditDistanceBoldFilter(0.7), new LibSvmEntityFilter(
+							modelBase), true, true, true, 10, false, -1, false,
+					-1, wikiApi, bingKey);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		SmaphAnnotatorDebugger debugger = new SmaphAnnotatorDebugger();
+		ann.setDebugger(debugger);
+		
+		ann.solveSa2W(text);
+
+		try {
+			return debugger.toJson(wikiApi).toString();
+		} catch (JSONException | IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+	}
+	
 	@GET
 	@Path("/default")
 	@Produces({ MediaType.APPLICATION_JSON })

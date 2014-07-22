@@ -21,11 +21,42 @@ import it.acubelab.erd.learn.LibSvmFilter;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Vector;
+
+import org.apache.commons.lang.ArrayUtils;
 
 /**
  * An SVM-based entity filter.
  */
 public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
+
+	public static String[] ftrNames = new String[] {
+			"is_s1", // 1
+			"is_s2",
+			"is_s3",
+			"is_s4",
+			"is_s5",
+			"s1_freq",
+			"s1_rhoScore", //
+			"s1_localCoherence", //
+			"s1_lp",
+			"s1_editDistance", // 10
+			"s1_commonness", //
+			"s1_avgRank",
+			"s1_ambiguity",
+			"s1_pageRank", //
+			"s2_editDistance", "s2_rank",
+			"s2_webTotalWiki",
+			"s2_webTotal",
+			"s3_rank",
+			"s3_wikiWebTotal", // 20
+			"s3_editDistanceTitle", "s3_editDistanceNoPar",
+			"s3_editDistanceBolds", "s3_capitalizedBolds", "s3_avgBoldsWords",
+			"s5_rank", "s5_wikiWebTotal", "s5_editDistanceTitle",
+			"s5_editDistanceNoPar", "s5_editDistanceBolds", // 30
+			"s5_capitalizedBolds", "s5_avgBoldsWords",
+
+	};
 
 	public LibSvmEntityFilter(String modelFileBase) throws IOException {
 		super(modelFileBase + ".model", modelFileBase + ".range");
@@ -50,8 +81,11 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 		return res;
 	}
 
-	/**Turns a frature_name-feature_value mapping to an array of features.
-	 * @param features the mapping from feature names to feature values.
+	/**
+	 * Turns a frature_name-feature_value mapping to an array of features.
+	 * 
+	 * @param features
+	 *            the mapping from feature names to feature values.
 	 * @return an array of feature values.
 	 */
 	public static double[] featuresToFtrVectStatic(
@@ -64,40 +98,11 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 					"Implementation error -- check the features");
 		}
 
-		return new double[] {
-				getOrDefault(features, "is_s1", 0.0), 							// 1
-				getOrDefault(features, "is_s2", 0.0),
-				getOrDefault(features, "is_s3", 0.0),
-				getOrDefault(features, "is_s4", 0.0),
-				getOrDefault(features, "is_s5", 0.0),
-				getOrDefault(features, "s1_freq", 0.0),
-				getOrDefault(features, "s1_rhoScore", 0.0),//
-				getOrDefault(features, "s1_localCoherence", 0.0),//
-				getOrDefault(features, "s1_lp", 0.0),
-				getOrDefault(features, "s1_editDistance", 0.0), 				// 10
-				getOrDefault(features, "s1_commonness", 0.0),//
-				getOrDefault(features, "s1_avgRank", 0.0),
-				getOrDefault(features, "s1_ambiguity", 0.0),
-				getOrDefault(features, "s1_pageRank", 0.0),//
-				getOrDefault(features, "s2_editDistance", 0.0),
-				getOrDefault(features, "s2_rank", 0.0),
-				getOrDefault(features, "s2_webTotalWiki", 0.0),
-				getOrDefault(features, "s2_webTotal", 0.0),
-				getOrDefault(features, "s3_rank", 0.0),
-				getOrDefault(features, "s3_wikiWebTotal", 0.0), 				// 20
-				getOrDefault(features, "s3_editDistanceTitle", 0.0),
-				getOrDefault(features, "s3_editDistanceNoPar", 0.0),
-				getOrDefault(features, "s3_editDistanceBolds", 0.0),
-				getOrDefault(features, "s3_capitalizedBolds", 0.0),
-				getOrDefault(features, "s3_avgBoldsWords", 0.0),
-				getOrDefault(features, "s5_rank", 0.0),
-				getOrDefault(features, "s5_wikiWebTotal", 0.0),
-				getOrDefault(features, "s5_editDistanceTitle", 0.0),
-				getOrDefault(features, "s5_editDistanceNoPar", 0.0),
-				getOrDefault(features, "s5_editDistanceBolds", 0.0),			// 30
-				getOrDefault(features, "s5_capitalizedBolds", 0.0),
-				getOrDefault(features, "s5_avgBoldsWords", 0.0),
-		};
+		Vector<Double> ftrValues = new Vector<>();
+		for (String ftrName : ftrNames)
+			ftrValues.add(getOrDefault(features, ftrName, 0.0));
+		
+		return ArrayUtils.toPrimitive(ftrValues.toArray(new Double[] {}));
 	}
 
 	private static boolean checkFeatures(HashMap<String, Double> features) {
