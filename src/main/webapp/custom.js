@@ -23,12 +23,12 @@ function setupPopoverContent(buttonTd, wid, widToFtrs){
 function showLoading(){
   buttonText = $('#debug-button').text()
   $('#debug-button').html("Loading...")
-  $("#running-cat").css("visibility", "visible")
+  $("#cat-loading").attr("src", "running-cat.gif")
 }
 
 function stopLoading(){
   $('#debug-button').html(buttonText)
-  $("#running-cat").css("visibility", "hidden")
+  $("#cat-loading").attr("src", "sitting-cat.png")
 }
 
 function issueQuery() {
