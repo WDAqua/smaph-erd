@@ -342,6 +342,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 									ann.getConcept(), bolds);
 							debugger.addEntityFeaturesS1(query,
 									ann.getConcept(), ESFeatures, accept);
+							if (accept)
+								debugger.addResult(query, ann.getConcept());
 						}
 					}
 				}
@@ -366,6 +368,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 								bolds);
 						debugger.addEntityFeaturesS2(query, wid, ESFeatures,
 								accept);
+						if (accept)
+							debugger.addResult(query, wid);
 					}
 				}
 			}
@@ -392,6 +396,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 								bolds);
 						debugger.addEntityFeaturesS3(query, wid, ESFeatures,
 								accept);
+						if (accept)
+							debugger.addResult(query, wid);
+
 					}
 				}
 			}

@@ -8,6 +8,7 @@ import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URLEncoder;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +34,7 @@ public class SmaphAnnotatorDebugger {
 	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS3 = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source2SearchResult = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source3SearchResult = new HashMap<>();
+	private HashMap<String, HashSet<Integer>> result = new HashMap<>();
 
 	public void addProcessedQuery(String query) {
 		processedQueries.add(query);
@@ -209,19 +211,20 @@ public class SmaphAnnotatorDebugger {
 			String query, WikipediaApiInterface wikiApi) throws JSONException,
 			IOException {
 		JSONArray res = new JSONArray();
-		for (Triple<Integer, HashMap<String, Double>, Boolean> p : source
-				.get(query)) {
-			JSONObject pairJs = new JSONObject();
-			res.put(pairJs);
-			pairJs.put("wid", p.getLeft());
-			pairJs.put("title", wikiApi.getTitlebyId(p.getLeft()));
-			pairJs.put("url", widToUrl(p.getLeft(), wikiApi));
-			JSONObject features = new JSONObject();
-			pairJs.put("features", features);
-			for (String ftrName : LibSvmEntityFilter.ftrNames)
-				features.put(ftrName, p.getMiddle().get(ftrName));
-			pairJs.put("accepted", p.getRight());
-		}
+		if (source.containsKey(query))
+			for (Triple<Integer, HashMap<String, Double>, Boolean> p : source
+					.get(query)) {
+				JSONObject pairJs = new JSONObject();
+				res.put(pairJs);
+				pairJs.put("wid", p.getLeft());
+				pairJs.put("title", wikiApi.getTitlebyId(p.getLeft()));
+				pairJs.put("url", widToUrl(p.getLeft(), wikiApi));
+				JSONObject features = new JSONObject();
+				pairJs.put("features", features);
+				for (String ftrName : LibSvmEntityFilter.ftrNames)
+					features.put(ftrName, p.getMiddle().get(ftrName));
+				pairJs.put("accepted", p.getRight());
+			}
 		return res;
 	}
 
@@ -265,6 +268,27 @@ public class SmaphAnnotatorDebugger {
 		return res;
 	}
 
+	public void addResult(String query, int wid) {
+		if (!this.result.containsKey(query))
+			this.result.put(query, new HashSet<Integer>());
+		this.result.get(query).add(wid);
+
+	}
+
+	private JSONArray getResults(String query, WikipediaApiInterface wikiApi)
+			throws JSONException, IOException {
+		JSONArray res = new JSONArray();
+		if (result.containsKey(query))
+			for (Integer wid : result.get(query)) {
+				JSONObject triple = new JSONObject();
+				res.put(triple);
+				triple.put("wid", wid);
+				triple.put("title", wikiApi.getTitlebyId(wid));
+				triple.put("url", widToUrl(wid, wikiApi));
+			}
+		return res;
+	}
+
 	public JSONObject toJson(WikipediaApiInterface wikiApi)
 			throws JSONException, IOException {
 		JSONObject dump = new JSONObject();
@@ -276,11 +300,9 @@ public class SmaphAnnotatorDebugger {
 			JSONObject phase1S1 = new JSONObject();
 			JSONObject phase1S2 = new JSONObject();
 			JSONObject phase1S3 = new JSONObject();
-			JSONObject phase2 = new JSONObject();
 			queryData.put("bingResponseNS", getBingResponseNormalSearch(query));
 			queryData.put("bingResponseWS", getBingResponseWikiSearch(query));
 			queryData.put("phase1", phase1);
-			queryData.put("phase2", phase2);
 			phase1.put("source1", phase1S1);
 			phase1.put("source2", phase1S2);
 			phase1.put("source3", phase1S3);
@@ -303,6 +325,9 @@ public class SmaphAnnotatorDebugger {
 					getSourceSearchResult(source3SearchResult, query, wikiApi));
 			phase1S3.put("entityFeatures",
 					getEntityFeatures(this.entityFeaturesS3, query, wikiApi));
+
+			/** Populate results */
+			queryData.put("results", getResults(query, wikiApi));
 		}
 		return dump;
 	}
