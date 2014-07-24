@@ -6,7 +6,6 @@ $('#query-input').keypress(function (event) {
   }
 });
 
-
 $('.activate-tooltip').tooltip()
 
 function setupPopoverContent(buttonTd, wid, widToFtrs){
@@ -21,10 +20,20 @@ function setupPopoverContent(buttonTd, wid, widToFtrs){
   pop = buttonTd.popover({trigger: "focus", content: table, placement: "left", html: true, container:"body"})
 }
 
-function issueQuery() {
-  query = $('#query-input').val()
+function showLoading(){
   buttonText = $('#debug-button').text()
   $('#debug-button').html("Loading...")
+  $("#running-cat").css("visibility", "visible")
+}
+
+function stopLoading(){
+  $('#debug-button').html(buttonText)
+  $("#running-cat").css("visibility", "hidden")
+}
+
+function issueQuery() {
+  query = $('#query-input').val()
+  showLoading();
   fillIn(query);
 }
 
@@ -33,14 +42,14 @@ function fillIn(query) {
     $.getJSON( debugAPI, {Text: query,})
     .done(
       function( data ) {
-	$('#debug-button').html(buttonText)
+	stopLoading();
 	$.each(data,
 	       function (query, qdata){
 		 $( "#query" ).html( query );
 		 $( ".clear-data" ).empty()
 		 $.each(qdata.phase1.source1.bolds,
 			function (){
-			  tr = $( "<tr>" );
+			  var tr = $( "<tr>" );
 			  tr.appendTo($("#retrievedBoldsTable"));
 			  $( "<td>" ).html(this.rank).appendTo(tr);
 			  $( "<td>" ).html(this.bold).appendTo(tr);
@@ -48,7 +57,7 @@ function fillIn(query) {
 			});
 		 $.each(qdata.phase1.source1.filteredBolds,
 			function (){
-			  tr = $( "<tr>" );
+			  var tr = $( "<tr>" );
 			  tr.appendTo("#filteredBoldsTable");
 			  $( "<td>" ).html(this).appendTo(tr);
 			});
@@ -61,16 +70,16 @@ function fillIn(query) {
 			});
 		$.each(qdata.phase1.source1.annotations,
 			function (){
-			  tr = $( "<tr>" );
+			  var tr = $( "<tr>" );
 			  tr.appendTo("#annotationsTable");
 			  $( "<td>" ).html(this.bold).appendTo(tr);
 			  $( "<td>" ).html(this.wid).appendTo(tr);
-			  linkTd = $( "<td>" );
+			  var linkTd = $( "<td>" );
 			  linkTd.appendTo(tr);
 			  $( "<a>" ).attr("href", this.url).attr("target", "_blank").html(this.title).appendTo(linkTd);
-			  buttonTd = $( "<td>" );
+			  var buttonTd = $( "<td>" );
 			  buttonTd.appendTo(tr);
-			  acceptedTd = $( "<td>" );
+			  var acceptedTd = $( "<td>" );
 			  acceptedTd.appendTo(tr);
 			  if (widToAcceptedS1[this.wid])
 			    $("<span>").attr("class", "glyphicon glyphicon-ok green").appendTo(acceptedTd);
@@ -90,18 +99,18 @@ function fillIn(query) {
 		
 		 $.each(qdata.phase1.source2.pages,
 			function (){
-			  tr = $( "<tr>" );
+			  var tr = $( "<tr>" );
 			  tr.appendTo("#pagesSource2Table");
 			  $( "<td>" ).html(this.rank).appendTo(tr);
-			  urlTd = $( "<td>" ).appendTo(tr);
+			  var urlTd = $( "<td>" ).appendTo(tr);
 			  urlTd.append($("<a>").attr("href",this.url).attr("target", "_blank").html((this.url.length < 45) ? this.url : this.url.substring(0,45)+"..."));
 			  $( "<td>" ).html(this.wid).appendTo(tr);
-			  linkTd = $( "<td>" );
+			  var linkTd = $( "<td>" );
 			  linkTd.appendTo(tr);
 			  $( "<a>" ).attr("href", this.url).attr("target", "_blank").html(this.title).appendTo(linkTd);
-			  buttonTd = $( "<td>" );
+			  var buttonTd = $( "<td>" );
 			  buttonTd.appendTo(tr);
-			  acceptedTd = $( "<td>" );
+			  var acceptedTd = $( "<td>" );
 			  acceptedTd.appendTo(tr);
 			  if (this.wid in widToAcceptedS2)
 			    if (widToAcceptedS2[this.wid])
@@ -124,18 +133,18 @@ function fillIn(query) {
 		
 		 $.each(qdata.phase1.source3.pages,
 			function (){
-			  tr = $( "<tr>" );
+			  var tr = $( "<tr>" );
 			  tr.appendTo("#pagesSource3Table");
 			  $( "<td>" ).html(this.rank).appendTo(tr);
-			  urlTd = $( "<td>" ).appendTo(tr);
+			  var urlTd = $( "<td>" ).appendTo(tr);
 			  urlTd.append($("<a>").attr("href",this.url).attr("target", "_blank").html((this.url.length < 45) ? this.url : this.url.substring(0,45)+"..."));
 			  $( "<td>" ).html(this.wid).appendTo(tr);
 			  linkTd = $( "<td>" );
 			  linkTd.appendTo(tr);
 			  $( "<a>" ).attr("href", this.url).attr("target", "_blank").html(this.title).appendTo(linkTd);
-			  buttonTd = $( "<td>" );
+			  var buttonTd = $( "<td>" );
 			  buttonTd.appendTo(tr);
-			  acceptedTd = $( "<td>" );
+			  var acceptedTd = $( "<td>" );
 			  acceptedTd.appendTo(tr);
 			  if (this.wid in widToAcceptedS3)
 			    if (widToAcceptedS3[this.wid])

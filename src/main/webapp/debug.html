@@ -51,8 +51,7 @@
     
     <div class="container-fluid">
       <div class="row starter-template">
-	<div class="col-lg-3"></div>
-	<div class="col-lg-6">
+	<div class="col-lg-6 col-lg-offset-3">
 	  <div class="input-group">
 	    <input type="text" class="form-control" id="query-input" value="amstrong mon landing">
 	    <span class="input-group-btn">
@@ -60,13 +59,24 @@
 	    </span>
 	  </div><!-- /input-group -->
 	</div><!-- /.col-lg-6 -->
-	<div class="col-lg-3"></div>
       </div><!-- /.row -->
 
-      
       <div class="row">
-	<div class="col-lg-6 col-lg-offset-3">
-	  <div class="alert alert-success" role="alert" id="result-alert">To debug a query, click on Debug!</div>
+	<div class="col-lg-8 col-lg-offset-2">
+	  <div class="alert alert-success" role="alert">
+	    <div class="container-fluid">
+	      <div class="row">
+		<div class="col-lg-8 col-lg-offset-1 vcenter" id="result-alert">
+		  To debug a query, click on Debug!
+		</div>
+	    	<div class="col-lg-2 vcenter">
+		  <div class="media">
+		    <img class="media-object" style="visibility:hidden" id="running-cat" src="running-cat.gif"/>
+		  </div>
+		</div>
+	      </div>
+	    </div>
+	  </div>
 	</div><!-- /.col-lg-6 -->
       </div><!-- /.row -->
 

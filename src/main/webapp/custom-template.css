@@ -18,3 +18,9 @@ body {
 .popover {
   max-width: 1000px;
 }
+
+.vcenter {
+    display: inline-block;
+    vertical-align: middle;
+    float: none;
+}
