@@ -24,3 +24,7 @@ body {
     vertical-align: middle;
     float: none;
 }
+
+a:hover {
+  text-decoration: none;
+}
