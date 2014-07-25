@@ -49,8 +49,6 @@ import com.sun.jersey.multipart.FormDataParam;
 @Path("")
 public class RestService {
 
-	private final Annotator annotator = new Annotator();
-
 	@POST
 	@Path("/shortTrack")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
@@ -58,7 +56,7 @@ public class RestService {
 	public String annotatePost(@FormDataParam("runID") String runId,
 			@FormDataParam("TextID") String textId,
 			@FormDataParam("Text") String text) {
-
+		Annotator annotator = new Annotator();
 		List<Annotation> annotations = annotator.annotate(runId, textId, text);
 
 		return encodeAnnotations(annotations);
