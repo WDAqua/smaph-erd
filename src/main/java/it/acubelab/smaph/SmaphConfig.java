@@ -54,7 +54,7 @@ public class SmaphConfig {
 			throw new RuntimeException(
 					"Configuration file "
 							+ configFile
-							+ " has dummy value 'KEY' or is unset. Please replace with an actual Tagme key.");
+							+ " has dummy value 'TAGME_KEY' or is unset. Please replace with an actual Tagme key.");
 
 		return defaultTagmeKey;
 	}
@@ -69,7 +69,7 @@ public class SmaphConfig {
 			throw new RuntimeException(
 					"Configuration file "
 							+ configFile
-							+ " has dummy value 'KEY' or is unset. Please replace with the actual Tagme host.");
+							+ " has dummy value 'TAGME_HOST' or is unset. Please replace with the actual Tagme host.");
 		return defaultTagmeHost;
 	}
 
@@ -83,7 +83,7 @@ public class SmaphConfig {
 			throw new RuntimeException(
 					"Configuration file "
 							+ configFile
-							+ " has dummy value 'KEY' or is unset. Please replace with an actual bing key.");
+							+ " has dummy value 'BING_KEY' or is unset. Please replace with an actual bing key.");
 		return defaultBingKey;
 	}
 
