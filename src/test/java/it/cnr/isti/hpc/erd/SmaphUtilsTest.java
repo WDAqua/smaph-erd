@@ -1,7 +1,7 @@
 package it.cnr.isti.hpc.erd;
 
 import static org.junit.Assert.*;
-import it.acubelab.erd.SmaphUtils;
+import it.acubelab.smaph.SmaphUtils;
 
 import org.junit.Test;
 

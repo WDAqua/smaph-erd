@@ -14,14 +14,14 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.learn;
+package it.acubelab.smaph.learn;
 
 import it.acubelab.batframework.metrics.MetricsResultSet;
+import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.SmaphAnnotator;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.acubelab.smaph.SmaphAnnotator;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.util.*;
@@ -81,7 +81,7 @@ public class GenerateModel {
 			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
 					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
 							editDistanceThr, wikiSearckTopK, bingKey);
-			WikiSenseAnnotatorDevelopment.setCache("wikisense.cache");
+			WATAnnotator.setCache("wikisense.cache");
 			SmaphAnnotator.setCache("bing.cache.full");
 
 			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
@@ -166,7 +166,7 @@ public class GenerateModel {
 			System.out.println(mcr.getReadable());
 		for (double[] paramGammaC : paramsToTest)
 			System.out.printf("%.5f\t%.5f%n", paramGammaC[0], paramGammaC[1]);
-		WikiSenseAnnotatorDevelopment.flush();
+		WATAnnotator.flush();
 	}
 
 	public static String getModelFileNameBaseEF(Integer[] ftrs, double wPos,

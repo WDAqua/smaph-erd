@@ -17,13 +17,13 @@
 package it.cnr.isti.hpc.erd.rest;
 
 import it.acubelab.batframework.data.ScoredAnnotation;
+import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.SmaphAnnotator;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
-import it.acubelab.erd.SmaphConfig;
-import it.acubelab.erd.boldfilters.EditDistanceBoldFilter;
-import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.acubelab.smaph.SmaphAnnotator;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.SmaphConfig;
+import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
+import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
 import it.cnr.isti.hpc.erd.Annotation;
 import it.cnr.isti.hpc.erd.Annotator;
 
@@ -40,7 +40,7 @@ import org.codehaus.jettison.json.*;
 import com.sun.jersey.multipart.FormDataParam;
 
 /**
- * @author Diego Ceccarelli <diego.ceccarelli@isti.cnr.it>
+ * @author Diego Ceccarelli <diego.ceccarelli@isti.cnr.it> (edited by Marco Cornolti)
  * 
  *         Created on Mar 15, 2014
  */
@@ -97,7 +97,7 @@ public class RestService {
 		}
 
 		String modelBase = "models/model_1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25_3.80000_6.00000_0.700_0.03000000_5.00000000_ANW";
-		WikiSenseAnnotatorDevelopment auxAnnotatorService = new WikiSenseAnnotatorDevelopment(
+		WATAnnotator auxAnnotatorService = new WATAnnotator(
 				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
 				"0", false, false, false);
 
@@ -139,7 +139,7 @@ public class RestService {
 		}
 
 		String modelBase = "models/model_1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25_3.80000_6.00000_0.700_0.03000000_5.00000000_ANW";
-		WikiSenseAnnotatorDevelopment auxAnnotatorService = new WikiSenseAnnotatorDevelopment(
+		WATAnnotator auxAnnotatorService = new WATAnnotator(
 				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
 				"0", false, false, false);
 

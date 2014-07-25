@@ -14,10 +14,10 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.entityfilters;
+package it.acubelab.smaph.entityfilters;
 
-import it.acubelab.erd.SmaphAnnotatorDebugger;
-import it.acubelab.erd.learn.LibSvmFilter;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.learn.LibSvmFilter;
 
 import java.io.IOException;
 import java.util.HashMap;

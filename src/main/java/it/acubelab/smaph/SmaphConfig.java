@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd;
+package it.acubelab.smaph;
 
 import java.io.FileInputStream;
 

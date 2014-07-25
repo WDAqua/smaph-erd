@@ -15,17 +15,17 @@
  */
 package it.cnr.isti.hpc.erd;
 
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.acubelab.smaph.SmaphAnnotator;
+import it.acubelab.smaph.SmaphConfig;
+import it.acubelab.smaph.boldfilters.*;
+import it.acubelab.smaph.entityfilters.*;
+import it.acubelab.smaph.learn.GenerateModel;
 import it.acubelab.batframework.problems.CandidatesSpotter;
 import it.acubelab.batframework.problems.Sa2WSystem;
 import it.acubelab.batframework.systemPlugins.TagmeAnnotator;
+import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.*;
 import it.acubelab.batframework.data.MultipleAnnotation;
-import it.acubelab.erd.SmaphAnnotator;
-import it.acubelab.erd.SmaphConfig;
-import it.acubelab.erd.boldfilters.*;
-import it.acubelab.erd.entityfilters.*;
-import it.acubelab.erd.learn.GenerateModel;
 
 import java.io.*;
 import java.util.*;
@@ -374,7 +374,7 @@ public class Annotator {
 							includeSourceAnnotatorCandidates,
 							topKannotatorCandidates);
 
-			WikiSenseAnnotatorDevelopment auxAnnotatorService = new WikiSenseAnnotatorDevelopment(
+			WATAnnotator auxAnnotatorService = new WATAnnotator(
 					"wikisense.mkapp.it", 80, method, sortBy, relatedness,
 					epsilon, minLp, false, false, false);
 			BoldFilter spotFilter = null;

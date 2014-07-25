@@ -14,9 +14,9 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.learn;
+package it.acubelab.smaph.learn;
 
-import it.acubelab.erd.SmaphUtils;
+import it.acubelab.smaph.SmaphUtils;
 
 import java.io.*;
 import java.util.*;

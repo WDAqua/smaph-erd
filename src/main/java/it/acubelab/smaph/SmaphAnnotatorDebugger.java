@@ -1,9 +1,9 @@
-package it.acubelab.erd;
+package it.acubelab.smaph;
 
 import it.acubelab.batframework.data.Annotation;
 import it.acubelab.batframework.utils.Pair;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.entityfilters.LibSvmEntityFilter;
+import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
 
 import java.io.IOException;
 import java.io.PrintStream;

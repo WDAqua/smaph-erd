@@ -14,18 +14,24 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.entityfilters;
+package it.acubelab.smaph.boldfilters;
 
-import java.util.HashMap;
+import it.acubelab.batframework.utils.Pair;
+
+import java.util.*;
 
 /**
- * An interface to an Entity filter.
+ * A filter that does nothing (accept all bolds).
  */
-public interface EntityFilter {
-	/**
-	 * @param features
-	 *            features of the entity.
-	 * @return true iff the entity should be kept.
-	 */
-	public boolean filterEntity(HashMap<String, Double> features);
+public class NoBoldFilter implements BoldFilter {
+
+	@Override
+	public List<String> filterBolds(String query,
+			List<Pair<String, Integer>> spotAndRanks, int resultsCount) {
+		HashSet<String> filteredSpots = new HashSet<>();
+		for (Pair<String, Integer> spotAndRank : spotAndRanks)
+			filteredSpots.add(spotAndRank.first);
+		return new ArrayList<String>(filteredSpots);
+	}
+
 }

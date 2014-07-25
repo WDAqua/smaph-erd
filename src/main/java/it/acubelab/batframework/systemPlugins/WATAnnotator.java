@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package it.acubelab.tagme.develexp;
+package it.acubelab.batframework.systemPlugins;
 
 import java.io.*;
 import java.net.*;
@@ -35,9 +35,9 @@ import it.acubelab.batframework.problems.MentionSpotter;
 import it.acubelab.batframework.problems.Sa2WSystem;
 import it.acubelab.batframework.utils.AnnotationException;
 import it.acubelab.batframework.utils.ProblemReduction;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
 
-public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
+public class WATAnnotator implements Sa2WSystem,
 		MentionSpotter, CandidatesSpotter {
 	private static final int RETRY_N = 2;
 	private long lastTime = 0;
@@ -91,18 +91,18 @@ public class WikiSenseAnnotatorDevelopment implements Sa2WSystem,
 		url2jsonCache = null;
 		System.gc();
 	}
-	public WikiSenseAnnotatorDevelopment(String ip, int port, String method) {
+	public WATAnnotator(String ip, int port, String method) {
 		this(ip, port, method, "PAGERANK", "mw", "", "");
 	}
 
-	public WikiSenseAnnotatorDevelopment(String ip, int port, String method,
+	public WATAnnotator(String ip, int port, String method,
 			String sortBy, String relatedness, String epsilon,
 			String minLinkProbability) {
 		this(ip, port, method, sortBy, relatedness, epsilon,
 				minLinkProbability, false, false, false);
 	}
 
-	public WikiSenseAnnotatorDevelopment(String ip, int port, String method,
+	public WATAnnotator(String ip, int port, String method,
 			String sortBy, String relatedness, String epsilon,
 			String minLinkProbability, boolean useContext, boolean useTagger,
 			boolean bogusFilter) {

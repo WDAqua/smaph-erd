@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.boldfilters;
+package it.acubelab.smaph.boldfilters;
 
 import it.acubelab.batframework.utils.Pair;
 

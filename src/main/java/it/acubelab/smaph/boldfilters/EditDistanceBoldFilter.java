@@ -14,11 +14,11 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.boldfilters;
+package it.acubelab.smaph.boldfilters;
 
 import it.acubelab.batframework.utils.Pair;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
-import it.acubelab.erd.SmaphUtils;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.SmaphUtils;
 
 import java.util.HashSet;
 import java.util.List;

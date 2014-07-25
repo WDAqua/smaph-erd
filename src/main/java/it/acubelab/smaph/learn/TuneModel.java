@@ -14,12 +14,12 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.learn;
+package it.acubelab.smaph.learn;
 
 import it.acubelab.batframework.metrics.*;
 import it.acubelab.batframework.utils.*;
 import it.acubelab.batframework.utils.Pair;
-import it.acubelab.erd.*;
+import it.acubelab.smaph.*;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.IOException;

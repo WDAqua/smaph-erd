@@ -14,15 +14,15 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd;
+package it.acubelab.smaph;
 
 import it.acubelab.batframework.data.*;
 import it.acubelab.batframework.problems.Sa2WSystem;
+import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.*;
-import it.acubelab.erd.boldfilters.*;
-import it.acubelab.erd.entityfilters.*;
-import it.acubelab.erd.main.ERDDatasetFilter;
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.acubelab.smaph.boldfilters.*;
+import it.acubelab.smaph.entityfilters.*;
+import it.acubelab.smaph.main.ERDDatasetFilter;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.*;
@@ -50,7 +50,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	private static int flushCounter = 0;
 	private WikipediaApiInterface wikiApi;
 
-	private WikiSenseAnnotatorDevelopment auxDisambiguator;
+	private WATAnnotator auxDisambiguator;
 	private BoldFilter boldFilter;
 	private EntityFilter entityFilter;
 	private boolean includeSourceNormalSearch;
@@ -87,7 +87,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 * @param bingKey
 	 *            the key to the Bing API.
 	 */
-	public SmaphAnnotator(WikiSenseAnnotatorDevelopment auxDisambiguator,
+	public SmaphAnnotator(WATAnnotator auxDisambiguator,
 			BoldFilter boldFilter, EntityFilter entityFilter,
 			boolean includeSourceAnnotator, boolean includeSourceNormalSearch,
 			boolean includeSourceWikiSearch, int wikiSearchPages,

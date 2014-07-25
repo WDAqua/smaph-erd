@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.entityfilters;
+package it.acubelab.smaph.entityfilters;
 
 import java.util.HashMap;
 

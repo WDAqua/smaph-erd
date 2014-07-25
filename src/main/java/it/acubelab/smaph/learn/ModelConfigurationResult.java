@@ -14,9 +14,9 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.learn;
+package it.acubelab.smaph.learn;
 
-import it.acubelab.erd.learn.TuneModel.OptimizaionProfiles;
+import it.acubelab.smaph.learn.TuneModel.OptimizaionProfiles;
 
 import java.io.Serializable;
 import java.util.List;

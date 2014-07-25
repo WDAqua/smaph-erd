@@ -14,20 +14,20 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.learn;
+package it.acubelab.smaph.learn;
 
 import it.acubelab.batframework.data.Tag;
 import it.acubelab.batframework.datasetPlugins.ERD2014Dataset;
 import it.acubelab.batframework.datasetPlugins.SMAPHDataset;
 import it.acubelab.batframework.datasetPlugins.YahooWebscopeL24Dataset;
 import it.acubelab.batframework.problems.C2WDataset;
+import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.SmaphAnnotator;
-import it.acubelab.erd.boldfilters.EditDistanceBoldFilter;
-import it.acubelab.erd.entityfilters.NoEntityFilter;
-import it.acubelab.erd.main.ERDDatasetFilter;
-import it.acubelab.tagme.develexp.WikiSenseAnnotatorDevelopment;
+import it.acubelab.smaph.SmaphAnnotator;
+import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
+import it.acubelab.smaph.entityfilters.NoEntityFilter;
+import it.acubelab.smaph.main.ERDDatasetFilter;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.FileNotFoundException;
@@ -116,7 +116,7 @@ public class GenerateTrainingAndTest {
 			double editDistanceSpotFilterThreshold, int wikiSearchTopK,
 			String bingKey) throws FileNotFoundException,
 			ClassNotFoundException, IOException {
-		WikiSenseAnnotatorDevelopment wikiSense = new WikiSenseAnnotatorDevelopment(
+		WATAnnotator wikiSense = new WATAnnotator(
 				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
 				"0.0"/* minlp */, true, false, false);
 

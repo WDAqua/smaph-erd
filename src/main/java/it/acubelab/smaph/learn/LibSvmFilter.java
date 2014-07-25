@@ -14,9 +14,9 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.learn;
+package it.acubelab.smaph.learn;
 
-import it.acubelab.erd.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
 
 import java.io.*;
 import java.util.HashMap;

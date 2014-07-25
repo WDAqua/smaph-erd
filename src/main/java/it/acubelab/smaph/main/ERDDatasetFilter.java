@@ -14,12 +14,12 @@
  *  limitations under the License.
  */
 
-package it.acubelab.erd.main;
+package it.acubelab.smaph.main;
 
 import it.acubelab.batframework.data.*;
 import it.acubelab.batframework.problems.A2WDataset;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.erd.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.IOException;
