@@ -43,9 +43,7 @@ public class Annotator {
 	public Annotator() {
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		bingKey = SmaphConfig.getDefaultBingKey();
-		tagmeHost = SmaphConfig.getDefaultTagmeHost();
-		tagmeKey = SmaphConfig.getDefaultTagmeKey();
-
+		
 		try {
 			if (wikiApi == null)
 				wikiApi = new WikipediaApiInterface("wid.cache",
@@ -56,9 +54,6 @@ public class Annotator {
 		}
 		if (wikiToFreeb == null)
 			wikiToFreeb = new WikipediaToFreebase("mapdb");
-
-		if (tagme == null)
-			tagme = new TagmeAnnotator(tagmeHost, tagmeKey);
 	}
 
 	/**
@@ -421,8 +416,12 @@ public class Annotator {
 			return res;
 		}
 
-		else if (runId.equals("tagme"))
-			return annotatePure(query, textID, tagme);
+		else if (runId.equals("tagme")){
+			if (tagme == null) {
+				tagmeHost = SmaphConfig.getDefaultTagmeHost();
+				tagmeKey = SmaphConfig.getDefaultTagmeKey();
+				tagme = new TagmeAnnotator(tagmeHost, tagmeKey);}
+			return annotatePure(query, textID, tagme);}
 		else if (runId.equals("void"))
 			return new Vector<>();
 
