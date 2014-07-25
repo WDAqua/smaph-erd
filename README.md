@@ -1,52 +1,44 @@
-Entity Recognition and Disambiguation Challenge
+SMAPH system for query entity linking.
 =============
 
-This package contains code for the [Entity Recognition and Disambiguation Challenge](http://web-ngram.research.microsoft.com/erd2014). 
-It took me some time to configure all the stuff and I think it could be useful for other teams participating in the challenge.  
+This package contains the code of the SMAPH system developed by Marco Cornolti, Massimiliano Ciaramita, Paolo Ferragina, Stefan Rued and Hinrich Shuetze.
 
-The package contains two utilities: 
+The SMAPH system links queries to the entities mentioned in the query, disambiguating mentions if needed. Entities are Wikipedia pages. This problem is known as "entity recognition and disambiguation in queries". For example, the query "armstrong moon landing" should point to [Neil Armstrong](http://en.wikipedia.org/wiki/Neil_Armstrong) and [Moon Landing](http://en.wikipedia.org/wiki/Moon_landing), while the query "armstrong trumpet" should point to [Louis Armstrong](http://en.wikipedia.org/wiki/Louis_Armstrong) and [Trumpet](http://en.wikipedia.org/wiki/Trumpet).
 
-  * code to index the freebase <-> wikipedia file provided by the organizers, in order to convert the wikipedia labels to freebase id (and to filter out invalid entities);
-  * code to start the REST service (for now, just the short track).
-  
+This system won the [Entity Recognition and Disambiguation Challenge](http://web-ngram.research.microsoft.com/erd2014) (short-text track).
 
-### Index the entity.tsv file
-  
-Once you have downloaded the [entity.tsv file](http://web-ngram.research.microsoft.com/erd2014/Docs/entity.tsv) provided in the [Datasets page](http://web-ngram.research.microsoft.com/erd2014/Datasets.aspx), you can index it running 
+SMAPH is built on top of [Bing](http://bing.com). For this reason, you will need a key to access Bing's API. 
 
-    ./scripts/index.sh entity.tsv mapdb
+The system is deployed as a web service but can also be queried directly from your code.
 
-This command will create a folder `mapdb` containing an index with all the mappings. At runtime you can access 
-the index creating a WikipediaToFreebase object:
+# Deploy instructions
+## Standard (and suggested) way: deploy a web service.
+1. Download the code
+	* git clone http://github.com/marcocor/smaph-erd
+	* cd smaph-erd
+2. Set the Bing API key
+	* obtain a key of the Bing Search API [here](https://datamarket.azure.com/dataset/bing/search)
+	* cp smaph-config.xml.template smaph-config.xml
+	* edit smaph-config.xml replacing BING_KEY with your [Primary Account Key](https://datamarket.azure.com/account)
+3. Run smaph:
+	* mvn -Djetty.port=9090 jetty:run where 9090 is the TCP port your server will be listening to
+3. Use smaph! You can either:
+	* access the Json API at http://localhost:9090/smaph/rest/default
+	* access the debug interface, that will guide you through the steps of the algorithm at http://localhost:9090/smaph/debug.html
 
-    WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb"); // the folder name
+## Call SMAPH's Java methods
+You can also access the SMAPH system directly by calling its Java methods. Take a look at the annotateGetFull method in RestService.java to see how it's done.
 
-And then use:
+## ERD-Challenge way
+SMAPH also provides a standard interface as defined by the [ERD Challenge 20014](http://web-ngram.research.microsoft.com/erd2014). Thid interface is accessible at:
 
-    wikiToFreebase.getLabel("Diego_Maradona");
-
-in order to retrieve the freebase-id for the entity `Diego_Maradona`. Please observe that wikipedia labels are case sensitive and that I split 
-out the common prefix `/wikipedia/en_title/`  to make things more compact. 
-
-### Rest Service 
-
-I set up a REST service for the short track as required in the challenge. I put both a POST and a GET service, the GET service is useful to test
-if everything works. In order to use it you only have to patch the [Annotator](src/main/java/it/cnr/isti/hpc/erd/Annotator.java) object and 
-make sure that you return your list of [Annotations](src/main/java/it/cnr/isti/hpc/erd/Annotation.java). When you are ready, you only have to 
-run the command
-
-    mvn jetty:run 
-
-and the rest service will answer at the address:
-
-    http://$(your-ip-address):8080/erd-challenge/rest/shortTrack
-
-You can also have the service running on a different port setting the jetty.port parameter. Here's an example:
-
-    mvn -Djetty.port=9999 jetty:run
-   
-I hope this will help ;) 
-
-Diego
+http://localhost:9090/smaph/rest/shortTrack
 
 
+# Contacts
+For any bug you encounter, you can open a bug report on [github](http://github.com/marcor/smaph-erd).
+
+For any enquiry, send an email at cornolti@di.unipi.it
+
+Enjoy,
+The SMAPH team.

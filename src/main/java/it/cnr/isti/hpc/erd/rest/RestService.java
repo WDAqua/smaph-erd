@@ -40,7 +40,8 @@ import org.codehaus.jettison.json.*;
 import com.sun.jersey.multipart.FormDataParam;
 
 /**
- * @author Diego Ceccarelli <diego.ceccarelli@isti.cnr.it> (edited by Marco Cornolti)
+ * @author Diego Ceccarelli <diego.ceccarelli@isti.cnr.it> (edited by Marco
+ *         Cornolti)
  * 
  *         Created on Mar 15, 2014
  */
@@ -63,16 +64,6 @@ public class RestService {
 		return encodeAnnotations(annotations);
 	}
 
-	@GET
-	@Path("/shortTrack")
-	@Produces({ MediaType.TEXT_PLAIN })
-	public String annotateGet(@QueryParam("runID") String runId,
-			@QueryParam("TextID") String textId, @QueryParam("Text") String text) {
-		List<Annotation> annotations = annotator.annotate(runId, textId, text);
-
-		return encodeAnnotations(annotations);
-	}
-
 	private String encodeAnnotations(List<Annotation> annotations) {
 		StringBuilder sb = new StringBuilder();
 		for (Annotation a : annotations) {
@@ -88,9 +79,13 @@ public class RestService {
 	public String debugSmaph(@QueryParam("Text") String text) {
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		String bingKey = SmaphConfig.getDefaultBingKey();
+		String bingCache = SmaphConfig.getDefaultBingCache();
+
 		WikipediaApiInterface wikiApi;
 		try {
 			wikiApi = new WikipediaApiInterface("wid.cache", "redirect.cache");
+			if (bingCache != null)
+				SmaphAnnotator.setCache(bingCache);
 		} catch (ClassNotFoundException | IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
@@ -113,7 +108,7 @@ public class RestService {
 		}
 		SmaphAnnotatorDebugger debugger = new SmaphAnnotatorDebugger();
 		ann.setDebugger(debugger);
-		
+
 		ann.solveSa2W(text);
 
 		try {
@@ -123,16 +118,20 @@ public class RestService {
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 	@GET
 	@Path("/default")
 	@Produces({ MediaType.APPLICATION_JSON })
 	public String annotateGetFull(@QueryParam("Text") String text) {
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		String bingKey = SmaphConfig.getDefaultBingKey();
+		String bingCache = SmaphConfig.getDefaultBingCache();
 		WikipediaApiInterface wikiApi;
 		try {
 			wikiApi = new WikipediaApiInterface("wid.cache", "redirect.cache");
+			if (bingCache != null)
+				SmaphAnnotator.setCache(bingCache);
+
 		} catch (ClassNotFoundException | IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
