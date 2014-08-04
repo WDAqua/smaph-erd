@@ -18,10 +18,17 @@ package it.acubelab.smaph;
 
 import it.acubelab.batframework.utils.Pair;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Vector;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.lang.StringUtils;
 import org.tartarus.snowball.ext.EnglishStemmer;
@@ -181,4 +188,32 @@ public class SmaphUtils {
 		return stemmedString;
 	}
 
+	/**Compress a string with GZip.
+	 * @param str the string.
+	 * @return the compressed string.
+	 * @throws IOException if something went wrong during compression.
+	 */
+	public static byte[] compress(String str) throws IOException {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		GZIPOutputStream gzip = new GZIPOutputStream(out);
+		gzip.write(str.getBytes());
+		gzip.close();
+		return out.toByteArray();
+	}
+
+	/**Decompress a GZipped string.
+	 * @param compressed the sequence of bytes
+	 * @return the decompressed string.
+	 * @throws IOException  if something went wrong during decompression.
+	 */
+	public static String decompress(byte[] compressed) throws IOException {
+		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(
+				compressed));
+		BufferedReader bf = new BufferedReader(new InputStreamReader(gis));
+		String outStr = "";
+		String line;
+		while ((line = bf.readLine()) != null)
+			outStr += line;
+		return outStr;
+	}
 }

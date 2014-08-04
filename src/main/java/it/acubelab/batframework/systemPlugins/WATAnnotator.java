@@ -20,9 +20,9 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
 import it.acubelab.batframework.data.Annotation;
 import it.acubelab.batframework.data.Mention;
@@ -37,8 +37,8 @@ import it.acubelab.batframework.utils.AnnotationException;
 import it.acubelab.batframework.utils.ProblemReduction;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 
-public class WATAnnotator implements Sa2WSystem,
-		MentionSpotter, CandidatesSpotter {
+public class WATAnnotator implements Sa2WSystem, MentionSpotter,
+		CandidatesSpotter {
 	private static final int RETRY_N = 2;
 	private long lastTime = 0;
 	private boolean useContext, useTagger, bogusFilter;
@@ -51,15 +51,15 @@ public class WATAnnotator implements Sa2WSystem,
 	private HashMap<String, HashMap<String, Double>> additionalInfo = new HashMap<>();
 	private HashMap<String, List<HashMap<String, Double>>> additionalCandidatesInfo = new HashMap<>();
 	private boolean brutalD2WReduction = false;
-	private static  HashMap<String, JSONObject> url2jsonCache = null;
-	static long flushCounter = 0;
-	static final int FLUSH_EVERY = 200;
-	static String resultsCacheFilename = null;
+	private static HashMap<String, JSONObject> url2jsonCache = null;
+	private static long flushCounter = 0;
+	private static final int FLUSH_EVERY = 200;
+	private static String resultsCacheFilename = null;
 
 	public static synchronized void increaseFlushCounter()
 			throws FileNotFoundException, IOException {
 		flushCounter++;
-		if (flushCounter % FLUSH_EVERY == 0)
+		if ((flushCounter % FLUSH_EVERY) == 0)
 			flush();
 	}
 
@@ -72,9 +72,11 @@ public class WATAnnotator implements Sa2WSystem,
 					new FileOutputStream(resultsCacheFilename));
 			oos.writeObject(url2jsonCache);
 			oos.close();
-			SmaphAnnotatorDebugger.out.println("Flushing WikiSense cache Done.");
+			SmaphAnnotatorDebugger.out
+					.println("Flushing WikiSense cache Done.");
 		}
 	}
+
 	public static void setCache(String cacheFilename)
 			throws FileNotFoundException, IOException, ClassNotFoundException {
 		System.out.println("Loading wikisense cache...");
@@ -91,21 +93,20 @@ public class WATAnnotator implements Sa2WSystem,
 		url2jsonCache = null;
 		System.gc();
 	}
+
 	public WATAnnotator(String ip, int port, String method) {
 		this(ip, port, method, "PAGERANK", "mw", "", "");
 	}
 
-	public WATAnnotator(String ip, int port, String method,
-			String sortBy, String relatedness, String epsilon,
-			String minLinkProbability) {
+	public WATAnnotator(String ip, int port, String method, String sortBy,
+			String relatedness, String epsilon, String minLinkProbability) {
 		this(ip, port, method, sortBy, relatedness, epsilon,
 				minLinkProbability, false, false, false);
 	}
 
-	public WATAnnotator(String ip, int port, String method,
-			String sortBy, String relatedness, String epsilon,
-			String minLinkProbability, boolean useContext, boolean useTagger,
-			boolean bogusFilter) {
+	public WATAnnotator(String ip, int port, String method, String sortBy,
+			String relatedness, String epsilon, String minLinkProbability,
+			boolean useContext, boolean useTagger, boolean bogusFilter) {
 		this.urlTag = String.format("http://%s:%d/tag/tag", ip, port);
 		this.urlSpot = String.format("http://%s:%d/tag/spot", ip, port);
 		this.urlD2W = String.format("http://%s:%d/tag/disambiguate", ip, port);
@@ -135,8 +136,10 @@ public class WATAnnotator implements Sa2WSystem,
 
 	@Override
 	public String getName() {
-		return String.format("WikiSense (method=%s epsilon=%s usecontext=%b relatedness=%s sortby=%s)",
-				method, epsilon.equals("") ? "default" : epsilon, useContext, relatedness, sortBy);
+		return String
+				.format("WikiSense (method=%s epsilon=%s usecontext=%b relatedness=%s sortby=%s)",
+						method, epsilon.equals("") ? "default" : epsilon,
+						useContext, relatedness, sortBy);
 	}
 
 	@Override
@@ -146,14 +149,15 @@ public class WATAnnotator implements Sa2WSystem,
 
 	public HashSet<Annotation> solveD2WParams(String text,
 			HashSet<Mention> mentions, String newMinCommonness,
-			String newEpsilon, String kappa) {
+			String newEpsilon, String kappa) throws JSONException {
 		System.out.println(text.substring(0, Math.min(30, text.length())));
 		HashSet<Annotation> res = new HashSet<Annotation>();
 		JSONObject obj = null;
 
 		try {
 			obj = queryJson(text, mentions, urlD2W,
-					generateGetParameters(newMinCommonness, newEpsilon, kappa), RETRY_N);
+					generateGetParameters(newMinCommonness, newEpsilon, kappa),
+					RETRY_N);
 			System.out.println(obj);
 			System.out.println(((JSONObject) obj.get("time")).get("total"));
 			lastTime = (Long) ((JSONObject) obj.get("time")).get("total");
@@ -168,8 +172,8 @@ public class WATAnnotator implements Sa2WSystem,
 							+ e.getMessage());
 		}
 		JSONArray jsAnnotations = (JSONArray) obj.get("annotations");
-		for (Object js_ann_obj : jsAnnotations) {
-			JSONObject js_ann = (JSONObject) js_ann_obj;
+		for (int i = 0; i < jsAnnotations.length(); i++) {
+			JSONObject js_ann = (JSONObject) jsAnnotations.get(i);
 			// System.out.println(js_ann);
 			int start = ((Long) js_ann.get("start")).intValue();
 			int end = ((Long) js_ann.get("end")).intValue();
@@ -184,11 +188,11 @@ public class WATAnnotator implements Sa2WSystem,
 					.doubleValue();
 			double pageRank = ((Double) js_ann.get("pageRank")).doubleValue();
 			// System.out.println(text.substring(start, end) + "->" + id);
-			
-			Mention m = new Mention(start, end-start);
+
+			Mention m = new Mention(start, end - start);
 			if (mentions.contains(m))
 				res.add(new Annotation(m.getPosition(), m.getLength(), id));
-			
+
 			String mention = text.substring(start, end);
 			if (!additionalInfo.containsKey(mention))
 				additionalInfo.put(mention, new HashMap<String, Double>());
@@ -201,8 +205,8 @@ public class WATAnnotator implements Sa2WSystem,
 
 			JSONArray jsRankings = (JSONArray) js_ann.get("ranking");
 			int rank = 0;
-			for (Object jsRankingObj : jsRankings) {
-				JSONObject jsRanking = (JSONObject) jsRankingObj;
+			for (int j = 0; j < jsRankings.length(); j++) {
+				JSONObject jsRanking = (JSONObject) jsRankings.get(j);
 				id = ((Long) jsRanking.get("id")).intValue();
 				commonness = ((Double) jsRanking.get("commonness"))
 						.doubleValue();
@@ -233,8 +237,14 @@ public class WATAnnotator implements Sa2WSystem,
 	public HashSet<Annotation> solveD2W(String text, HashSet<Mention> mentions)
 			throws AnnotationException {
 		if (brutalD2WReduction)
-			return ProblemReduction.Sa2WToD2W(this.solveSa2W(text), mentions, -1f);
-		return solveD2WParams(text, mentions, minCommonness, epsilon, kappa );
+			return ProblemReduction.Sa2WToD2W(this.solveSa2W(text), mentions,
+					-1f);
+		try {
+			return solveD2WParams(text, mentions, minCommonness, epsilon, kappa);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
@@ -263,19 +273,26 @@ public class WATAnnotator implements Sa2WSystem,
 					"An error occurred while querying WikiSense API. Message: "
 							+ e.getMessage());
 		}
-		JSONArray jsAnnotations = (JSONArray) obj.get("annotations");
-		for (Object js_ann_obj : jsAnnotations) {
-			JSONObject js_ann = (JSONObject) js_ann_obj;
-			JSONArray jsRanking = (JSONArray) js_ann.get("ranking");
-			// System.out.println(jsRanking);
-			for (Object jsCandidateObj : jsRanking) {
-				JSONObject jsCand = (JSONObject) jsCandidateObj;
-				int id = ((Long) jsCand.get("id")).intValue();
-				double rho = (Double) jsCand.get("score");
-				// System.out.println(id + " (" + rho + ")");
-				res.add(new ScoredTag(id, (float) rho));
+
+		try {
+			JSONArray jsAnnotations = (JSONArray) obj.get("annotations");
+			for (int i = 0; i < jsAnnotations.length(); i++) {
+				JSONObject js_ann = (JSONObject) jsAnnotations.get(i);
+				JSONArray jsRanking = (JSONArray) js_ann.get("ranking");
+				// System.out.println(jsRanking);
+				for (int j = 0; j < jsRanking.length(); j++) {
+					JSONObject jsCand = (JSONObject) jsRanking.get(j);
+					int id = ((Long) jsCand.get("id")).intValue();
+					double rho = (Double) jsCand.get("score");
+					// System.out.println(id + " (" + rho + ")");
+					res.add(new ScoredTag(id, (float) rho));
+				}
 			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+			throw new AnnotationException(e.getMessage());
 		}
+
 		return res;
 	}
 
@@ -287,30 +304,38 @@ public class WATAnnotator implements Sa2WSystem,
 		JSONObject obj = null;
 		try {
 			obj = queryJson(text, null, urlTag,
-					generateGetParameters(minCommonness, epsilon, kappa), RETRY_N);
+					generateGetParameters(minCommonness, epsilon, kappa),
+					RETRY_N);
 			lastTime = (Long) ((JSONObject) obj.get("time")).get("total");
 
 		} catch (Exception e) {
 			System.out
 					.print("Got error while querying WikiSense API with GET parameters: "
-							+ generateGetParameters(minCommonness, epsilon, kappa)
-							+ " with text: " + text);
+							+ generateGetParameters(minCommonness, epsilon,
+									kappa) + " with text: " + text);
 
 			throw new AnnotationException(
 					"An error occurred while querying WikiSense API. Message: "
 							+ e.getMessage());
 		}
-		JSONArray jsAnnotations = (JSONArray) obj.get("annotations");
-		for (Object js_ann_obj : jsAnnotations) {
-			JSONObject js_ann = (JSONObject) js_ann_obj;
-			// System.out.println(js_ann);
-			int start = ((Long) js_ann.get("start")).intValue();
-			int end = ((Long) js_ann.get("end")).intValue();
-			int id = ((Long) js_ann.get("id")).intValue();
-			double rho = (Double) js_ann.get("rho");
-			// System.out.println(text.substring(start, end) + "->" + id + " ("
-			// + rho + ")");
-			res.add(new ScoredAnnotation(start, end - start, id, (float) rho));
+		try {
+			JSONArray jsAnnotations = (JSONArray) obj.get("annotations");
+			for (int i = 0; i < jsAnnotations.length(); i++) {
+				JSONObject js_ann = (JSONObject) jsAnnotations.get(i);
+				// System.out.println(js_ann);
+				int start = ((Long) js_ann.get("start")).intValue();
+				int end = ((Long) js_ann.get("end")).intValue();
+				int id = ((Long) js_ann.get("id")).intValue();
+				double rho = (Double) js_ann.get("rho");
+				// System.out.println(text.substring(start, end) + "->" + id +
+				// " ("
+				// + rho + ")");
+				res.add(new ScoredAnnotation(start, end - start, id,
+						(float) rho));
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+			throw new AnnotationException(e.getMessage());
 		}
 		return res;
 	}
@@ -331,16 +356,21 @@ public class WATAnnotator implements Sa2WSystem,
 					"An error occurred while querying WikiSense API. Message: "
 							+ e.getMessage());
 		}
-		JSONArray jsSpots = (JSONArray) obj.get("spots");
-		for (Object jSpotObj : jsSpots) {
-			JSONObject jsSpot = (JSONObject) jSpotObj;
-			// System.out.println(jsSpot);
-			int start = ((Long) jsSpot.get("start")).intValue();
-			int end = ((Long) jsSpot.get("end")).intValue();
-			// System.out.printf("Found spot: [%s]%n", text.substring(start,
-			// end));
-			Mention newMention = new Mention(start, end - start);
-			res.add(newMention);
+		try {
+			JSONArray jsSpots = (JSONArray) obj.get("spots");
+			for (int i = 0; i < jsSpots.length(); i++) {
+				JSONObject jsSpot = (JSONObject) jsSpots.get(i);
+				// System.out.println(jsSpot);
+				int start = ((Long) jsSpot.get("start")).intValue();
+				int end = ((Long) jsSpot.get("end")).intValue();
+				// System.out.printf("Found spot: [%s]%n", text.substring(start,
+				// end));
+				Mention newMention = new Mention(start, end - start);
+				res.add(newMention);
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+			throw new AnnotationException(e.getMessage());
 		}
 		return res;
 	}
@@ -358,8 +388,7 @@ public class WATAnnotator implements Sa2WSystem,
 			getParameters += String.format("&minCommonness=%s",
 					newMinCommonness);
 		if (!newKappa.equals(""))
-			getParameters += String.format("&kappa=%s",
-					newKappa);
+			getParameters += String.format("&kappa=%s", newKappa);
 		if (!minLinkProbability.equals(""))
 			getParameters += String.format("&minLinkProbability=%s",
 					minLinkProbability);
@@ -383,65 +412,67 @@ public class WATAnnotator implements Sa2WSystem,
 				JSONObject mentionJson = new JSONObject();
 				mentionJson.put("start", m.getPosition());
 				mentionJson.put("end", m.getPosition() + m.getLength());
-				mentionsJson.add(mentionJson);
+				mentionsJson.put(mentionJson);
 			}
 			parameters.put("spans", mentionsJson);
 		}
 		parameters.put("text", text);
 		System.out.println(getParameters);
-		System.out.println(parameters.toJSONString());
+		System.out.println(parameters.toString());
 
 		String resultStr = null;
 		try {
-		URL wikiSenseApi = new URL(String.format("%s?%s", url, getParameters));
-		
-		String cacheKey = wikiSenseApi.toExternalForm()+parameters.toJSONString();
-		if (url2jsonCache != null && url2jsonCache.containsKey(cacheKey))
-			return url2jsonCache.get(cacheKey);
-		
-		HttpURLConnection slConnection = (HttpURLConnection) wikiSenseApi
-				.openConnection();
-		slConnection.setReadTimeout(0);
-		slConnection.setDoOutput(true);
-		slConnection.setDoInput(true);
-		slConnection.setRequestMethod("POST");
-		slConnection.setRequestProperty("Content-Type", "application/json");
-		slConnection.setRequestProperty("Content-Length", ""
-				+ parameters.toJSONString().getBytes().length);
+			URL wikiSenseApi = new URL(String.format("%s?%s", url,
+					getParameters));
 
-		slConnection.setUseCaches(false);
+			String cacheKey = wikiSenseApi.toExternalForm()
+					+ parameters.toString();
+			if (url2jsonCache != null && url2jsonCache.containsKey(cacheKey))
+				return url2jsonCache.get(cacheKey);
 
-		DataOutputStream wr = new DataOutputStream(
-				slConnection.getOutputStream());
-		wr.write(parameters.toJSONString().getBytes());
-		wr.flush();
-		wr.close();
+			HttpURLConnection slConnection = (HttpURLConnection) wikiSenseApi
+					.openConnection();
+			slConnection.setReadTimeout(0);
+			slConnection.setDoOutput(true);
+			slConnection.setDoInput(true);
+			slConnection.setRequestMethod("POST");
+			slConnection.setRequestProperty("Content-Type", "application/json");
+			slConnection.setRequestProperty("Content-Length", ""
+					+ parameters.toString().getBytes().length);
 
-		if (slConnection.getResponseCode() != 200) {
-			Scanner s = new Scanner(slConnection.getErrorStream())
+			slConnection.setUseCaches(false);
+
+			DataOutputStream wr = new DataOutputStream(
+					slConnection.getOutputStream());
+			wr.write(parameters.toString().getBytes());
+			wr.flush();
+			wr.close();
+
+			if (slConnection.getResponseCode() != 200) {
+				Scanner s = new Scanner(slConnection.getErrorStream())
+						.useDelimiter("\\A");
+				System.err.printf("Got HTTP error %d. Message is: %s%n",
+						slConnection.getResponseCode(), s.next());
+				s.close();
+			}
+
+			Scanner s = new Scanner(slConnection.getInputStream())
 					.useDelimiter("\\A");
-			System.err.printf("Got HTTP error %d. Message is: %s%n",
-					slConnection.getResponseCode(), s.next());
-			s.close();
-		}
+			resultStr = s.hasNext() ? s.next() : "";
 
-		Scanner s = new Scanner(slConnection.getInputStream())
-				.useDelimiter("\\A");
-		resultStr = s.hasNext() ? s.next() : "";
-		
-		JSONObject obj = (JSONObject) JSONValue.parse(resultStr);
-		if (url2jsonCache != null)
-			url2jsonCache.put(cacheKey,
-				obj);
-		increaseFlushCounter();
-		
-		return obj;
-		
-		} catch (Exception e){
+			JSONObject obj = new JSONObject(resultStr);
+			if (url2jsonCache != null)
+				url2jsonCache.put(cacheKey, obj);
+			increaseFlushCounter();
+
+			return obj;
+
+		} catch (Exception e) {
 			try {
 				Thread.sleep(3000);
-				if (retry>0)
-					return queryJson(text, mentions, url, getParameters, retry-1);
+				if (retry > 0)
+					return queryJson(text, mentions, url, getParameters,
+							retry - 1);
 				else
 					throw e;
 			} catch (InterruptedException e1) {
@@ -467,22 +498,27 @@ public class WATAnnotator implements Sa2WSystem,
 					"An error occurred while querying WikiSense API. Message: "
 							+ e.getMessage());
 		}
-		JSONArray jsSpots = (JSONArray) obj.get("spots");
-		for (Object jSpotObj : jsSpots) {
-			JSONObject jsSpot = (JSONObject) jSpotObj;
-			int start = ((Long) jsSpot.get("start")).intValue();
-			int end = ((Long) jsSpot.get("end")).intValue();
+		try {
+			JSONArray jsSpots = (JSONArray) obj.get("spots");
+			for (int i = 0; i < jsSpots.length(); i++) {
+				JSONObject jsSpot = (JSONObject) jsSpots.get(i);
+				int start = ((Long) jsSpot.get("start")).intValue();
+				int end = ((Long) jsSpot.get("end")).intValue();
 
-			JSONArray jsRanking = (JSONArray) jsSpot.get("ranking");
-			int[] rankedCandidates = new int[jsRanking.size()];
-			for (int i = 0; i < jsRanking.size(); i++) {
-				JSONObject jsCand = (JSONObject) jsRanking.get(i);
-				int id = ((Long) jsCand.get("id")).intValue();
-				rankedCandidates[i] = id;
+				JSONArray jsRanking = (JSONArray) jsSpot.get("ranking");
+				int[] rankedCandidates = new int[jsRanking.length()];
+				for (int j = 0; j < jsRanking.length(); j++) {
+					JSONObject jsCand = (JSONObject) jsRanking.get(j);
+					int id = ((Long) jsCand.get("id")).intValue();
+					rankedCandidates[j] = id;
+				}
+				MultipleAnnotation newAnnotation = new MultipleAnnotation(
+						start, end - start, rankedCandidates);
+				res.add(newAnnotation);
 			}
-			MultipleAnnotation newAnnotation = new MultipleAnnotation(start,
-					end - start, rankedCandidates);
-			res.add(newAnnotation);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			throw new AnnotationException(e.getMessage());
 		}
 		return res;
 	}

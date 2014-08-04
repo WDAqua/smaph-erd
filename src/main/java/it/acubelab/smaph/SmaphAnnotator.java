@@ -45,7 +45,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	private String bingKey;
 	private static final int FLUSH_EVERY = 50;
 	public static final String WIKITITLE_ENDPAR_REGEX = "\\s*\\([^\\)]*\\)\\s*$";
-	private static HashMap<String, JSONObject> url2jsonCache = new HashMap<>();
+	private static HashMap<String, byte[]> url2jsonCache = new HashMap<>();
 	private static String resultsCacheFilename;
 	private static int flushCounter = 0;
 	private WikipediaApiInterface wikiApi;
@@ -687,8 +687,13 @@ public class SmaphAnnotator implements Sa2WSystem {
 						+ URLEncoder.encode(query, "utf8")
 						+ "%27&Options=%27EnableHighlighting%27&Market=%27en-US%27&Adult=%27Off%27&$format=Json");
 
+		JSONObject result = null; 
+		byte[] compressed = url2jsonCache.get(url.toExternalForm());;
+		if (compressed != null)
+			result = new JSONObject (SmaphUtils.decompress(compressed));
+
 		boolean cached = !forceCacheOverride
-				&& url2jsonCache.containsKey(url.toExternalForm());
+				&& result!=null;
 		SmaphAnnotatorDebugger.out.printf("%s%s %s%n",
 				forceCacheOverride ? "<forceCacheOverride>" : "",
 				cached ? "<cached>" : "Querying", url);
@@ -717,15 +722,16 @@ public class SmaphAnnotator implements Sa2WSystem {
 			Scanner s = new Scanner(connection.getInputStream())
 					.useDelimiter("\\A");
 			String resultStr = s.hasNext() ? s.next() : "";
-			url2jsonCache.put(url.toExternalForm(), new JSONObject(resultStr));
+			result = new JSONObject(resultStr);
+			url2jsonCache.put(url.toExternalForm(), SmaphUtils.compress(result.toString()));
 			increaseFlushCounter();
 		}
 
-		if (recacheNeeded(url2jsonCache.get(url.toExternalForm()))
+		if (recacheNeeded(result)
 				&& retryLeft > 0)
 			return queryBing(query, retryLeft - 1);
 
-		return url2jsonCache.get(url.toExternalForm());
+		return result;
 	}
 
 	/**
@@ -747,7 +753,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		if (new File(resultsCacheFilename).exists()) {
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(
 					resultsCacheFilename));
-			url2jsonCache = (HashMap<String, JSONObject>) ois.readObject();
+			url2jsonCache = (HashMap<String, byte[]>) ois.readObject();
 			ois.close();
 		}
 	}

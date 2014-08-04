@@ -22,6 +22,7 @@ import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.SmaphConfig;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.util.*;
@@ -37,7 +38,10 @@ public class GenerateModel {
 	public static void main(String[] args) throws Exception {
 		Locale.setDefault(Locale.US);
 		String freebKey = "<FREEBASE_KEY>";
-		String bingKey = "<BING_KEY>";
+
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		String bingKey = SmaphConfig.getDefaultBingKey();
+
 		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
 				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
 		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
@@ -82,7 +86,7 @@ public class GenerateModel {
 					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
 							editDistanceThr, wikiSearckTopK, bingKey);
 			WATAnnotator.setCache("wikisense.cache");
-			SmaphAnnotator.setCache("bing.cache.full");
+			SmaphAnnotator.setCache(SmaphConfig.getDefaultBingCache());
 
 			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
 			BinaryExampleGatherer testEntityFilterGatherer = new BinaryExampleGatherer();
