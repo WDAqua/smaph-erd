@@ -23,7 +23,7 @@ The system is deployed as a web service but can also be queried directly from yo
 3. Run smaph:
 	* `mvn -Djetty.port=9090 jetty:run` where 9090 is the TCP port your server will be listening to
 3. Use smaph! You can either:
-	* access the Json API at **http://localhost:9090/smaph/rest/default**
+	* access the Json API at **http://localhost:9090/smaph/rest/default?Text=armstrong%20moon**
 	* access the debug interface, that will guide you through the steps of the algorithm at **http://localhost:9090/smaph/debug.html**
 
 ## Call SMAPH's Java methods
