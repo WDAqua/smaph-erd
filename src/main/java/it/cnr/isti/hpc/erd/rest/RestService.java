@@ -24,6 +24,7 @@ import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
 import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
+import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.cnr.isti.hpc.erd.Annotation;
 import it.cnr.isti.hpc.erd.Annotator;
 
@@ -98,8 +99,8 @@ public class RestService {
 		try {
 			ann = new SmaphAnnotator(auxAnnotatorService,
 					new EditDistanceBoldFilter(0.7), new LibSvmEntityFilter(
-							modelBase), true, true, true, 10, false, -1, false,
-					-1, wikiApi, bingKey);
+							modelBase), new DummyLinkBack(), true, true, true,
+					10, false, -1, false, -1, wikiApi, bingKey);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
@@ -144,8 +145,8 @@ public class RestService {
 		try {
 			ann = new SmaphAnnotator(auxAnnotatorService,
 					new EditDistanceBoldFilter(0.7), new LibSvmEntityFilter(
-							modelBase), true, true, true, 10, false, -1, false,
-					-1, wikiApi, bingKey);
+							modelBase), new DummyLinkBack(), true, true, true,
+					10, false, -1, false, -1, wikiApi, bingKey);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);

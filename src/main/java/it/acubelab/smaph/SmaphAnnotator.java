@@ -22,6 +22,7 @@ import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.*;
 import it.acubelab.smaph.boldfilters.*;
 import it.acubelab.smaph.entityfilters.*;
+import it.acubelab.smaph.linkback.LinkBack;
 import it.acubelab.smaph.main.ERDDatasetFilter;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
@@ -53,6 +54,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	private WATAnnotator auxDisambiguator;
 	private BoldFilter boldFilter;
 	private EntityFilter entityFilter;
+	private LinkBack linkBack;
 	private boolean includeSourceNormalSearch;
 	private boolean includeSourceAnnotator;
 	private boolean includeSourceWikiSearch;
@@ -87,8 +89,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 * @param bingKey
 	 *            the key to the Bing API.
 	 */
-	public SmaphAnnotator(WATAnnotator auxDisambiguator,
-			BoldFilter boldFilter, EntityFilter entityFilter,
+	public SmaphAnnotator(WATAnnotator auxDisambiguator, BoldFilter boldFilter,
+			EntityFilter entityFilter, LinkBack linkBack,
 			boolean includeSourceAnnotator, boolean includeSourceNormalSearch,
 			boolean includeSourceWikiSearch, int wikiSearchPages,
 			boolean includeSourceAnnotatorTopK, int topKAnnotatorCandidates,
@@ -97,6 +99,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		this.auxDisambiguator = auxDisambiguator;
 		this.boldFilter = boldFilter;
 		this.entityFilter = entityFilter;
+		this.linkBack = linkBack;
 		this.wikiApi = wikiApi;
 		this.includeSourceAnnotator = includeSourceAnnotator;
 		this.includeSourceNormalSearch = includeSourceNormalSearch;
@@ -149,13 +152,13 @@ public class SmaphAnnotator implements Sa2WSystem {
 
 	@Override
 	public HashSet<Annotation> solveA2W(String text) throws AnnotationException {
-		return null;
+		return ProblemReduction.Sa2WToA2W(solveSa2W(text));
 	}
 
 	@Override
 	public HashSet<Tag> solveC2W(String text) throws AnnotationException {
-		return ProblemReduction.A2WToC2W(ProblemReduction.Sa2WToA2W(this
-				.solveSa2W(text)));
+		return ProblemReduction.A2WToC2W(ProblemReduction
+				.Sa2WToA2W(solveSa2W(text)));
 	}
 
 	@Override
@@ -231,7 +234,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		if (debugger != null)
 			debugger.addProcessedQuery(query);
 
-		HashSet<ScoredAnnotation> taggedEntities = new HashSet<>();
+		HashSet<ScoredAnnotation> annotations = new HashSet<>();
 		try {
 
 			/** Search the query on bing */
@@ -243,6 +246,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 			double webTotal = Double.NaN;
 			List<String> filteredBolds = null;
 			HashMap<Integer, Integer> rankToIdNS = null;
+			HashMap<Integer, HashSet<String>> rankToBoldsNS = null;
+
 			if (includeSourceAnnotator || includeSourceWikiSearch
 					|| includeSourceRelatedSearch || includeSourceNormalSearch) {
 				bingBoldsAndRank = new Vector<>();
@@ -255,6 +260,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 				filteredBolds = boldFilter.filterBolds(query, bingBoldsAndRank,
 						resultsCount);
 				rankToIdNS = urlsToRankID(urls);
+				rankToBoldsNS = new HashMap<>();
+				SmaphUtils.mapRankToBoldsLC(bingBoldsAndRank, rankToBoldsNS,
+						null);
 
 				if (debugger != null) {
 					debugger.addBoldPositionEditDistance(query,
@@ -272,12 +280,16 @@ public class SmaphAnnotator implements Sa2WSystem {
 			List<Pair<String, Integer>> bingBoldsAndRankWS = new Vector<>();
 			HashMap<String, Pair<Integer, Integer>> annTitlesToIdAndRankWS = null;
 			Triple<Integer, Double, JSONObject> resCountAndWebTotalWS = null;
+			HashMap<Integer, HashSet<String>> rankToBoldsWS = null;
 			double webTotalWiki = Double.NaN;
 			if (includeSourceWikiSearch | includeSourceNormalSearch) {
 				resCountAndWebTotalWS = takeBingData(query, bingBoldsAndRankWS,
 						wikiSearchUrls, null, topKWikiSearch, true);
 				webTotalWiki = resCountAndWebTotalWS.getMiddle();
 				HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
+				rankToBoldsWS = new HashMap<>();
+				SmaphUtils.mapRankToBoldsLC(bingBoldsAndRankWS, rankToBoldsWS,
+						null);
 				if (debugger != null) {
 					debugger.addSource3SearchResult(query, rankToIdWikiSearch,
 							wikiSearchUrls);
@@ -295,6 +307,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			HashMap<Integer, Integer> rankToIdRelatedSearch = null;
 			HashMap<String, Pair<Integer, Integer>> annTitlesToIdAndRankRS = null;
 			double webTotalRelatedSearch = Double.NaN;
+			HashMap<Integer, HashSet<String>> rankToBoldsRS = null;
 			if (includeSourceRelatedSearch) {
 				relatedSearch = getRelatedSearch(relatedSearchRes, query);
 				relatedSearchUrls = new Vector<>();
@@ -305,6 +318,10 @@ public class SmaphAnnotator implements Sa2WSystem {
 				webTotalRelatedSearch = resCountAndWebTotalRS.getMiddle();
 				rankToIdRelatedSearch = urlsToRankID(relatedSearchUrls);
 				annTitlesToIdAndRankRS = adjustTitles(rankToIdRelatedSearch);
+				rankToBoldsRS = new HashMap<>();
+				SmaphUtils.mapRankToBoldsLC(bingBoldsAndRankRS, rankToBoldsRS,
+						null);
+
 			}
 
 			/** Annotate bolds on the annotator */
@@ -323,6 +340,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 					debugger.addReturnedAnnotation(query, spotToAnnotation);
 			}
 
+			HashMap<String[], Tag> boldsToAcceptedEntity = new HashMap<>();
+
 			// Filter and add annotations found by the disambiguator
 			if (includeSourceAnnotator) {
 				for (String bold : filteredBolds) {
@@ -333,8 +352,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 								bingBoldsAndRank, additionalInfo);
 						boolean accept = entityFilter.filterEntity(ESFeatures);
 						if (accept)
-							taggedEntities.add(new ScoredAnnotation(0, 1, ann
-									.getConcept(), 0));
+							boldsToAcceptedEntity.put(new String[] { bold },
+									new Tag(ann.getConcept()));
 						if (debugger != null) {
 							HashSet<String> bolds = new HashSet<>();
 							bolds.add(bold);
@@ -355,15 +374,12 @@ public class SmaphAnnotator implements Sa2WSystem {
 					int wid = rankToIdNS.get(rank);
 					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesNormalSearch(
 							query, wid, rank, webTotal, webTotalWiki);
+					HashSet<String> bolds = rankToBoldsNS.get(rank);
 					boolean accept = entityFilter.filterEntity(ESFeatures);
 					if (accept)
-						taggedEntities.add(new ScoredAnnotation(0, 1, wid, 0));
+						boldsToAcceptedEntity.put(
+								bolds.toArray(new String[] {}), new Tag(wid));
 					if (debugger != null) {
-						HashSet<String> bolds = new HashSet<>();
-						for (Pair<String, Integer> boldRank : bingBoldsAndRank) {
-							if (boldRank.second == rank)
-								bolds.add(boldRank.first);
-						}
 						debugger.addQueryCandidateBolds(query, "Source 2", wid,
 								bolds);
 						debugger.addEntityFeaturesS2(query, wid, ESFeatures,
@@ -383,15 +399,12 @@ public class SmaphAnnotator implements Sa2WSystem {
 							query, wid, rank, webTotalWiki, bingBoldsAndRankWS,
 							3);
 
+					HashSet<String> bolds = rankToBoldsWS.get(rank);
 					boolean accept = entityFilter.filterEntity(ESFeatures);
 					if (accept)
-						taggedEntities.add(new ScoredAnnotation(0, 1, wid, 0));
+						boldsToAcceptedEntity.put(
+								bolds.toArray(new String[] {}), new Tag(wid));
 					if (debugger != null) {
-						HashSet<String> bolds = new HashSet<>();
-						for (Pair<String, Integer> boldRank : bingBoldsAndRankWS) {
-							if (boldRank.second == rank)
-								bolds.add(boldRank.first);
-						}
 						debugger.addQueryCandidateBolds(query, "Source 3", wid,
 								bolds);
 						debugger.addEntityFeaturesS3(query, wid, ESFeatures,
@@ -412,10 +425,17 @@ public class SmaphAnnotator implements Sa2WSystem {
 							relatedSearch, wid, rank, webTotalRelatedSearch,
 							bingBoldsAndRankRS, 5);
 
-					if (entityFilter.filterEntity(ESFeatures))
-						taggedEntities.add(new ScoredAnnotation(0, 1, wid, 0));
+					HashSet<String> bolds = rankToBoldsRS.get(rank);
+					boolean accept = entityFilter.filterEntity(ESFeatures);
+					if (accept)
+						boldsToAcceptedEntity.put(
+								bolds.toArray(new String[] {}), new Tag(wid));
 				}
 			}
+
+			/** Link entities back to query mentions */
+
+			annotations = linkBack.linkBack(query, boldsToAcceptedEntity);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -423,7 +443,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		}
 		SmaphAnnotatorDebugger.out.printf("*** END :%s ***%n", query);
 
-		return taggedEntities;
+		return annotations;
 
 	}
 
@@ -438,12 +458,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 			String query) {
 		if (relatedSearchRes.isEmpty())
 			return null;
-		HashSet<String> qTokens = new HashSet<>(Arrays.asList(query
-				.split("\\W+")));
-		qTokens.remove("");
-		Vector<String> rsTokens = new Vector<>(Arrays.asList(relatedSearchRes
-				.get(0).split("\\s+")));
-		rsTokens.remove("");
+		List<String> qTokens = SmaphUtils.tokenize(query);
+		List<String> rsTokens = SmaphUtils.tokenize(relatedSearchRes.get(0));
 
 		String newSearch = "";
 		int insertedTokens = 0;
@@ -687,13 +703,13 @@ public class SmaphAnnotator implements Sa2WSystem {
 						+ URLEncoder.encode(query, "utf8")
 						+ "%27&Options=%27EnableHighlighting%27&Market=%27en-US%27&Adult=%27Off%27&$format=Json");
 
-		JSONObject result = null; 
-		byte[] compressed = url2jsonCache.get(url.toExternalForm());;
+		JSONObject result = null;
+		byte[] compressed = url2jsonCache.get(url.toExternalForm());
+		;
 		if (compressed != null)
-			result = new JSONObject (SmaphUtils.decompress(compressed));
+			result = new JSONObject(SmaphUtils.decompress(compressed));
 
-		boolean cached = !forceCacheOverride
-				&& result!=null;
+		boolean cached = !forceCacheOverride && result != null;
 		SmaphAnnotatorDebugger.out.printf("%s%s %s%n",
 				forceCacheOverride ? "<forceCacheOverride>" : "",
 				cached ? "<cached>" : "Querying", url);
@@ -723,12 +739,12 @@ public class SmaphAnnotator implements Sa2WSystem {
 					.useDelimiter("\\A");
 			String resultStr = s.hasNext() ? s.next() : "";
 			result = new JSONObject(resultStr);
-			url2jsonCache.put(url.toExternalForm(), SmaphUtils.compress(result.toString()));
+			url2jsonCache.put(url.toExternalForm(),
+					SmaphUtils.compress(result.toString()));
 			increaseFlushCounter();
 		}
 
-		if (recacheNeeded(result)
-				&& retryLeft > 0)
+		if (recacheNeeded(result) && retryLeft > 0)
 			return queryBing(query, retryLeft - 1);
 
 		return result;

@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +38,7 @@ public class SmaphUtils {
 
 	/**
 	 * For each word of bold, finds the word in query that has the minimum edit
-	 * distance, normalized by the word lenght. Returns the average of those
+	 * distance, normalized by the word length. Returns the average of those
 	 * distances.
 	 * 
 	 * @param query
@@ -48,26 +49,47 @@ public class SmaphUtils {
 	 *         against query.
 	 */
 	public static double getMinEditDist(String query, String bold) {
-		query = query.replaceAll("\\W+", " ").toLowerCase();
-		bold = bold.replaceAll("\\W+", " ").toLowerCase();
+		return getMinEditDist(query, bold, null);
+	}
 
-		String[] tokensQ = query.split("\\s+");
-		String[] tokensB = bold.split("\\s+");
+	/**
+	 * For each word of bold, finds the word in query that has the minimum edit
+	 * distance, normalized by the word length. Put that word in minTokens.
+	 * Returns the average of those distances.
+	 * 
+	 * @param query
+	 *            a query.
+	 * @param bold
+	 *            a bold.
+	 * @param minTokens
+	 *            the tokens of query having minimum edit distance.
+	 * @return the averaged normalized word-by-word edit distance of bold
+	 *         against query.
+	 */
+	public static double getMinEditDist(String query, String bold,
+			List<String> minTokens) {
+		List<String> tokensQ = tokenize(query);
+		List<String> tokensB = tokenize(bold);
 
-		if (tokensB.length == 0 || tokensQ.length == 0)
+		if (tokensB.size() == 0 || tokensQ.size() == 0)
 			return 1;
 
 		float avgMinDist = 0;
 		for (String tokenB : tokensB) {
-			float minDist = 1;
+			float minDist = Float.MAX_VALUE;
+			String bestQToken = null;
 			for (String tokenQ : tokensQ) {
 				float relLev = getNormEditDistance(tokenB, tokenQ);
-				if (relLev < minDist)
+				if (relLev < minDist) {
 					minDist = relLev;
+					bestQToken = tokenQ;
+				}
 			}
+			if (minTokens != null)
+				minTokens.add(bestQToken);
 			avgMinDist += minDist;
 		}
-		return avgMinDist / tokensB.length;
+		return avgMinDist / tokensB.size();
 	}
 
 	/**
@@ -133,10 +155,13 @@ public class SmaphUtils {
 		for (Pair<String, Integer> boldAndRank : boldAndRanks) {
 			String spot = boldAndRank.first.toLowerCase();
 			int rank = boldAndRank.second;
-			bolds.add(spot);
-			if (!positions.containsKey(rank))
-				positions.put(rank, new HashSet<String>());
-			positions.get(rank).add(spot);
+			if (bolds != null)
+				bolds.add(spot);
+			if (positions != null) {
+				if (!positions.containsKey(rank))
+					positions.put(rank, new HashSet<String>());
+				positions.get(rank).add(spot);
+			}
 		}
 
 	}
@@ -188,10 +213,14 @@ public class SmaphUtils {
 		return stemmedString;
 	}
 
-	/**Compress a string with GZip.
-	 * @param str the string.
+	/**
+	 * Compress a string with GZip.
+	 * 
+	 * @param str
+	 *            the string.
 	 * @return the compressed string.
-	 * @throws IOException if something went wrong during compression.
+	 * @throws IOException
+	 *             if something went wrong during compression.
 	 */
 	public static byte[] compress(String str) throws IOException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -201,10 +230,14 @@ public class SmaphUtils {
 		return out.toByteArray();
 	}
 
-	/**Decompress a GZipped string.
-	 * @param compressed the sequence of bytes
+	/**
+	 * Decompress a GZipped string.
+	 * 
+	 * @param compressed
+	 *            the sequence of bytes
 	 * @return the decompressed string.
-	 * @throws IOException  if something went wrong during decompression.
+	 * @throws IOException
+	 *             if something went wrong during decompression.
 	 */
 	public static String decompress(byte[] compressed) throws IOException {
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(
@@ -215,5 +248,12 @@ public class SmaphUtils {
 		while ((line = bf.readLine()) != null)
 			outStr += line;
 		return outStr;
+	}
+
+	public static List<String> tokenize(String text) {
+		text = text.replaceAll("\\W+", " ").toLowerCase();
+		Vector<String> tokens = new Vector<>(Arrays.asList(text.split("\\s+")));
+		tokens.remove("");
+		return tokens;
 	}
 }

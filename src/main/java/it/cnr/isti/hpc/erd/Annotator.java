@@ -20,6 +20,7 @@ import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.boldfilters.*;
 import it.acubelab.smaph.entityfilters.*;
 import it.acubelab.smaph.learn.GenerateModel;
+import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.acubelab.batframework.problems.CandidatesSpotter;
 import it.acubelab.batframework.problems.Sa2WSystem;
 import it.acubelab.batframework.systemPlugins.TagmeAnnotator;
@@ -43,7 +44,7 @@ public class Annotator {
 	public Annotator() {
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		bingKey = SmaphConfig.getDefaultBingKey();
-		
+
 		try {
 			if (wikiApi == null)
 				wikiApi = new WikipediaApiInterface("wid.cache",
@@ -406,9 +407,10 @@ public class Annotator {
 
 			List<Annotation> res = annotatePure(query, textID,
 					new SmaphAnnotator(auxAnnotatorService, spotFilter,
-							entityFilter, includeSourceAnnotator,
-							includeSourceNormalSearch, includeSourceWikiSearch,
-							wikiSearchPages, includeSourceAnnotatorCandidates,
+							entityFilter, new DummyLinkBack(),
+							includeSourceAnnotator, includeSourceNormalSearch,
+							includeSourceWikiSearch, wikiSearchPages,
+							includeSourceAnnotatorCandidates,
 							topKannotatorCandidates,
 							includeSourceRelatedSearch, topKRelatedSearch,
 							wikiApi, bingKey));
@@ -416,13 +418,14 @@ public class Annotator {
 			return res;
 		}
 
-		else if (runId.equals("tagme")){
+		else if (runId.equals("tagme")) {
 			if (tagme == null) {
 				tagmeHost = SmaphConfig.getDefaultTagmeHost();
 				tagmeKey = SmaphConfig.getDefaultTagmeKey();
-				tagme = new TagmeAnnotator(tagmeHost, tagmeKey);}
-			return annotatePure(query, textID, tagme);}
-		else if (runId.equals("void"))
+				tagme = new TagmeAnnotator(tagmeHost, tagmeKey);
+			}
+			return annotatePure(query, textID, tagme);
+		} else if (runId.equals("void"))
 			return new Vector<>();
 
 		throw new RuntimeException("unrecognized runID=" + runId);
