@@ -160,13 +160,14 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 					RETRY_N);
 			System.out.println(obj);
 			System.out.println(((JSONObject) obj.get("time")).get("total"));
-			lastTime = (Long) ((JSONObject) obj.get("time")).get("total");
+			lastTime = (Integer) ((JSONObject) obj.get("time")).get("total");
 
 		} catch (Exception e) {
 			System.err
 					.print("Got error while querying WikiSense API with GET parameters: "
 							+ generateGetParameters(newMinCommonness,
 									newEpsilon, kappa) + " with text: " + text);
+			e.printStackTrace();
 			throw new AnnotationException(
 					"An error occurred while querying WikiSense API. Message: "
 							+ e.getMessage());
@@ -175,14 +176,14 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 		for (int i = 0; i < jsAnnotations.length(); i++) {
 			JSONObject js_ann = (JSONObject) jsAnnotations.get(i);
 			// System.out.println(js_ann);
-			int start = ((Long) js_ann.get("start")).intValue();
-			int end = ((Long) js_ann.get("end")).intValue();
-			int id = ((Long) js_ann.get("id")).intValue();
+			int start = ((Integer) js_ann.get("start")).intValue();
+			int end = ((Integer) js_ann.get("end")).intValue();
+			int id = ((Integer) js_ann.get("id")).intValue();
 			double lp = ((Double) js_ann.get("linkProb")).doubleValue();
 			double commonness = ((Double) js_ann.get("commonness"))
 					.doubleValue();
 			double rhoScore = ((Double) js_ann.get("rho")).doubleValue();
-			double ambiguity = 1.0 / (1.0 + ((Long) js_ann.get("ambiguity"))
+			double ambiguity = 1.0 / (1.0 + ((Integer) js_ann.get("ambiguity"))
 					.intValue());
 			double localCoherence = ((Double) js_ann.get("localCoherence"))
 					.doubleValue();
@@ -207,12 +208,12 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			int rank = 0;
 			for (int j = 0; j < jsRankings.length(); j++) {
 				JSONObject jsRanking = (JSONObject) jsRankings.get(j);
-				id = ((Long) jsRanking.get("id")).intValue();
+				id = ((Integer) jsRanking.get("id")).intValue();
 				commonness = ((Double) jsRanking.get("commonness"))
 						.doubleValue();
 				double score = ((Double) jsRanking.get("score")).doubleValue();
 				pageRank = ((Double) jsRanking.get("pageRank")).doubleValue();
-				int synonimy = ((Long) jsRanking.get("synonymy")).intValue();
+				int synonimy = ((Integer) jsRanking.get("synonymy")).intValue();
 
 				HashMap<String, Double> values = new HashMap<>();
 				values.put("id", (double) id);
@@ -263,7 +264,7 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			getParameters += String.format("&minCommonness=%s", minCommonness);
 		try {
 			obj = queryJson(text, null, urlTag, getParameters, RETRY_N);
-			lastTime = (Long) ((JSONObject) obj.get("time")).get("total");
+			lastTime = (Integer) ((JSONObject) obj.get("time")).get("total");
 
 		} catch (Exception e) {
 			System.out
@@ -282,7 +283,7 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 				// System.out.println(jsRanking);
 				for (int j = 0; j < jsRanking.length(); j++) {
 					JSONObject jsCand = (JSONObject) jsRanking.get(j);
-					int id = ((Long) jsCand.get("id")).intValue();
+					int id = ((Integer) jsCand.get("id")).intValue();
 					double rho = (Double) jsCand.get("score");
 					// System.out.println(id + " (" + rho + ")");
 					res.add(new ScoredTag(id, (float) rho));
@@ -306,7 +307,7 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			obj = queryJson(text, null, urlTag,
 					generateGetParameters(minCommonness, epsilon, kappa),
 					RETRY_N);
-			lastTime = (Long) ((JSONObject) obj.get("time")).get("total");
+			lastTime = (Integer) ((JSONObject) obj.get("time")).get("total");
 
 		} catch (Exception e) {
 			System.out
@@ -323,9 +324,9 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			for (int i = 0; i < jsAnnotations.length(); i++) {
 				JSONObject js_ann = (JSONObject) jsAnnotations.get(i);
 				// System.out.println(js_ann);
-				int start = ((Long) js_ann.get("start")).intValue();
-				int end = ((Long) js_ann.get("end")).intValue();
-				int id = ((Long) js_ann.get("id")).intValue();
+				int start = ((Integer) js_ann.get("start")).intValue();
+				int end = ((Integer) js_ann.get("end")).intValue();
+				int id = ((Integer) js_ann.get("id")).intValue();
 				double rho = (Double) js_ann.get("rho");
 				// System.out.println(text.substring(start, end) + "->" + id +
 				// " ("
@@ -361,8 +362,8 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			for (int i = 0; i < jsSpots.length(); i++) {
 				JSONObject jsSpot = (JSONObject) jsSpots.get(i);
 				// System.out.println(jsSpot);
-				int start = ((Long) jsSpot.get("start")).intValue();
-				int end = ((Long) jsSpot.get("end")).intValue();
+				int start = ((Integer) jsSpot.get("start")).intValue();
+				int end = ((Integer) jsSpot.get("end")).intValue();
 				// System.out.printf("Found spot: [%s]%n", text.substring(start,
 				// end));
 				Mention newMention = new Mention(start, end - start);
@@ -502,14 +503,14 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			JSONArray jsSpots = (JSONArray) obj.get("spots");
 			for (int i = 0; i < jsSpots.length(); i++) {
 				JSONObject jsSpot = (JSONObject) jsSpots.get(i);
-				int start = ((Long) jsSpot.get("start")).intValue();
-				int end = ((Long) jsSpot.get("end")).intValue();
+				int start = ((Integer) jsSpot.get("start")).intValue();
+				int end = ((Integer) jsSpot.get("end")).intValue();
 
 				JSONArray jsRanking = (JSONArray) jsSpot.get("ranking");
 				int[] rankedCandidates = new int[jsRanking.length()];
 				for (int j = 0; j < jsRanking.length(); j++) {
 					JSONObject jsCand = (JSONObject) jsRanking.get(j);
-					int id = ((Long) jsCand.get("id")).intValue();
+					int id = ((Integer) jsCand.get("id")).intValue();
 					rankedCandidates[j] = id;
 				}
 				MultipleAnnotation newAnnotation = new MultipleAnnotation(
