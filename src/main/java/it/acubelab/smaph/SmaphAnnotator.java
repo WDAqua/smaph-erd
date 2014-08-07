@@ -772,6 +772,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 */
 	public static void setCache(String cacheFilename)
 			throws FileNotFoundException, IOException, ClassNotFoundException {
+		if (resultsCacheFilename != null && resultsCacheFilename.equals(cacheFilename))
+			return;
 		System.out.println("Loading bing cache...");
 		resultsCacheFilename = cacheFilename;
 		if (new File(resultsCacheFilename).exists()) {
