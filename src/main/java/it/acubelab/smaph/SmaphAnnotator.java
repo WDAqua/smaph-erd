@@ -87,13 +87,12 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 * @param bingKey
 	 *            the key to the Bing API.
 	 */
-	public SmaphAnnotator(WATAnnotator auxDisambiguator,
-			BoldFilter boldFilter, EntityFilter entityFilter,
-			boolean includeSourceAnnotator, boolean includeSourceNormalSearch,
-			boolean includeSourceWikiSearch, int wikiSearchPages,
-			boolean includeSourceAnnotatorTopK, int topKAnnotatorCandidates,
-			boolean includeRelatedSearch, int topKRelatedSearch,
-			WikipediaApiInterface wikiApi, String bingKey) {
+	public SmaphAnnotator(WATAnnotator auxDisambiguator, BoldFilter boldFilter,
+			EntityFilter entityFilter, boolean includeSourceAnnotator,
+			boolean includeSourceNormalSearch, boolean includeSourceWikiSearch,
+			int wikiSearchPages, boolean includeSourceAnnotatorTopK,
+			int topKAnnotatorCandidates, boolean includeRelatedSearch,
+			int topKRelatedSearch, WikipediaApiInterface wikiApi, String bingKey) {
 		this.auxDisambiguator = auxDisambiguator;
 		this.boldFilter = boldFilter;
 		this.entityFilter = entityFilter;
@@ -243,13 +242,16 @@ public class SmaphAnnotator implements Sa2WSystem {
 			double webTotal = Double.NaN;
 			List<String> filteredBolds = null;
 			HashMap<Integer, Integer> rankToIdNS = null;
+			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds = null;
 			if (includeSourceAnnotator || includeSourceWikiSearch
 					|| includeSourceRelatedSearch || includeSourceNormalSearch) {
 				bingBoldsAndRank = new Vector<>();
 				urls = new Vector<>();
 				relatedSearchRes = new Vector<>();
+				snippetsToBolds = new Vector<>();
 				resCountAndWebTotalNS = takeBingData(query, bingBoldsAndRank,
-						urls, relatedSearchRes, Integer.MAX_VALUE, false);
+						urls, relatedSearchRes, snippetsToBolds,
+						Integer.MAX_VALUE, false);
 				resultsCount = resCountAndWebTotalNS.getLeft();
 				webTotal = resCountAndWebTotalNS.getMiddle();
 				filteredBolds = boldFilter.filterBolds(query, bingBoldsAndRank,
@@ -259,11 +261,11 @@ public class SmaphAnnotator implements Sa2WSystem {
 				if (debugger != null) {
 					debugger.addBoldPositionEditDistance(query,
 							bingBoldsAndRank);
+					debugger.addSnippets(query, snippetsToBolds);
 					debugger.addBoldFilterOutput(query, filteredBolds);
 					debugger.addSource2SearchResult(query, rankToIdNS, urls);
 					debugger.addBingResponseNormalSearch(query,
 							resCountAndWebTotalNS.getRight());
-
 				}
 			}
 
@@ -275,7 +277,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			double webTotalWiki = Double.NaN;
 			if (includeSourceWikiSearch | includeSourceNormalSearch) {
 				resCountAndWebTotalWS = takeBingData(query, bingBoldsAndRankWS,
-						wikiSearchUrls, null, topKWikiSearch, true);
+						wikiSearchUrls, null, null, topKWikiSearch, true);
 				webTotalWiki = resCountAndWebTotalWS.getMiddle();
 				HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
 				if (debugger != null) {
@@ -301,7 +303,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 				bingBoldsAndRankRS = new Vector<>();
 				Triple<Integer, Double, JSONObject> resCountAndWebTotalRS = takeBingData(
 						query, bingBoldsAndRankRS, relatedSearchUrls, null,
-						topKRelatedSearch, false);
+						null, topKRelatedSearch, false);
 				webTotalRelatedSearch = resCountAndWebTotalRS.getMiddle();
 				rankToIdRelatedSearch = urlsToRankID(relatedSearchUrls);
 				annTitlesToIdAndRankRS = adjustTitles(rankToIdRelatedSearch);
@@ -550,6 +552,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 *            storage for the urls found by Bing.
 	 * @param relatedSearch
 	 *            storage for the "related search" suggestions.
+	 * @param snippetsToBolds
+	 *            storage for the list of pairs &lt;snippets, the bolds found in
+	 *            that snippet&gt;
 	 * @return a triple &lt;results, webTotal, bingReply&gt; where results is
 	 *         the number of results returned by Bing, webTotal is the number of
 	 *         pages found by Bing, and bingReply is the raw Bing reply.
@@ -563,8 +568,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 
 	private Triple<Integer, Double, JSONObject> takeBingData(String query,
 			List<Pair<String, Integer>> boldsAndRanks, List<String> urls,
-			List<String> relatedSearch, int topk, boolean wikisearch)
-			throws Exception {
+			List<String> relatedSearch,
+			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds,
+			int topk, boolean wikisearch) throws Exception {
 		if (!boldsAndRanks.isEmpty())
 			throw new RuntimeException("boldsAndRanks must be empty");
 		if (!urls.isEmpty())
@@ -578,7 +584,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		JSONArray webResults = (JSONArray) results.get("Web");
 		double webTotal = new Double((String) results.get("WebTotal"));
 
-		getBoldsAndUrls(webResults, topk, boldsAndRanks, urls);
+		getBoldsAndUrls(webResults, topk, boldsAndRanks, urls, snippetsToBolds);
 
 		if (relatedSearch != null) {
 			JSONArray relatedSearchResults = (JSONArray) results
@@ -630,13 +636,18 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 *            storage for the bolds and their rank.
 	 * @param urls
 	 *            storage for the result URLs.
+	 * @param snippetsToBolds
+	 *            storage for the list of pairs &lt;snippets, the bolds found in
+	 *            that snippet&gt;
 	 * @throws JSONException
 	 *             if the json returned by Bing could not be read.
 	 */
 	private static void getBoldsAndUrls(JSONArray webResults, double topk,
-			List<Pair<String, Integer>> boldsAndRanks, List<String> urls)
+			List<Pair<String, Integer>> boldsAndRanks, List<String> urls,
+			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds)
 			throws JSONException {
 		for (int i = 0; i < Math.min(webResults.length(), topk); i++) {
+			String snippet = "";
 			JSONObject resI = (JSONObject) webResults.get(i);
 			String descI = (String) resI.get("Description");
 			String url = (String) resI.get("Url");
@@ -651,14 +662,27 @@ public class SmaphAnnotator implements Sa2WSystem {
 			descI = descI.replaceAll(stop + "." + start, " ");
 			int startIdx = descI.indexOf(start);
 			int stopIdx = descI.indexOf(stop, startIdx);
+			int lastStop = -1;
+			Vector<Pair<Integer, Integer>> boldPosInSnippet = new Vector<>();
 			while (startIdx != -1 && stopIdx != -1) {
 				String spot = descI.subSequence(startIdx + 1, stopIdx)
 						.toString();
 				boldsAndRanks.add(new Pair<String, Integer>(spot, i));
 				SmaphAnnotatorDebugger.out.printf("Rank:%d Bold:%s%n", i, spot);
+				snippet += descI.substring(lastStop + 1, startIdx);
+				boldPosInSnippet.add(new Pair<Integer, Integer>(snippet
+						.length(), spot.length()));
+				snippet += spot;
+				lastStop = stopIdx;
 				startIdx = descI.indexOf(start, startIdx + 1);
 				stopIdx = descI.indexOf(stop, startIdx + 1);
 			}
+			snippet += descI.substring(lastStop + 1);
+			if (snippetsToBolds != null)
+				snippetsToBolds
+						.add(new Pair<String, Vector<Pair<Integer, Integer>>>(
+								snippet, boldPosInSnippet));
+
 		}
 	}
 
@@ -687,13 +711,13 @@ public class SmaphAnnotator implements Sa2WSystem {
 						+ URLEncoder.encode(query, "utf8")
 						+ "%27&Options=%27EnableHighlighting%27&Market=%27en-US%27&Adult=%27Off%27&$format=Json");
 
-		JSONObject result = null; 
-		byte[] compressed = url2jsonCache.get(url.toExternalForm());;
+		JSONObject result = null;
+		byte[] compressed = url2jsonCache.get(url.toExternalForm());
+		;
 		if (compressed != null)
-			result = new JSONObject (SmaphUtils.decompress(compressed));
+			result = new JSONObject(SmaphUtils.decompress(compressed));
 
-		boolean cached = !forceCacheOverride
-				&& result!=null;
+		boolean cached = !forceCacheOverride && result != null;
 		SmaphAnnotatorDebugger.out.printf("%s%s %s%n",
 				forceCacheOverride ? "<forceCacheOverride>" : "",
 				cached ? "<cached>" : "Querying", url);
@@ -723,12 +747,12 @@ public class SmaphAnnotator implements Sa2WSystem {
 					.useDelimiter("\\A");
 			String resultStr = s.hasNext() ? s.next() : "";
 			result = new JSONObject(resultStr);
-			url2jsonCache.put(url.toExternalForm(), SmaphUtils.compress(result.toString()));
+			url2jsonCache.put(url.toExternalForm(),
+					SmaphUtils.compress(result.toString()));
 			increaseFlushCounter();
 		}
 
-		if (recacheNeeded(result)
-				&& retryLeft > 0)
+		if (recacheNeeded(result) && retryLeft > 0)
 			return queryBing(query, retryLeft - 1);
 
 		return result;
@@ -990,7 +1014,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			urls = new Vector<>();
 			relatedSearchRes = new Vector<>();
 			resCountAndWebTotal = takeBingData(query, bingBoldsAndRank, urls,
-					relatedSearchRes, Integer.MAX_VALUE, false);
+					relatedSearchRes, null, Integer.MAX_VALUE, false);
 			resultsCount = resCountAndWebTotal.getLeft();
 			webTotal = resCountAndWebTotal.getMiddle();
 			filteredBolds = boldFilter.filterBolds(query, bingBoldsAndRank,
@@ -1015,7 +1039,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		double webTotalWiki = Double.NaN;
 		if (includeSourceWikiSearch | includeSourceNormalSearch) {
 			resCountAndWebTotalWS = takeBingData(query, bingBoldsAndRankWS,
-					wikiSearchUrls, null, topKWikiSearch, true);
+					wikiSearchUrls, null, null, topKWikiSearch, true);
 			webTotalWiki = resCountAndWebTotalWS.getMiddle();
 			HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
 			if (debugger != null) {
@@ -1040,7 +1064,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			relatedSearchUrls = new Vector<>();
 			bingBoldsAndRankRS = new Vector<>();
 			Triple<Integer, Double, JSONObject> resCountAndWebTotalRS = takeBingData(
-					query, bingBoldsAndRankRS, relatedSearchUrls, null,
+					query, bingBoldsAndRankRS, relatedSearchUrls, null, null,
 					topKRelatedSearch, false);
 			webTotalRelatedSearch = resCountAndWebTotalRS.getMiddle();
 			rankToIdRelatedSearch = urlsToRankID(relatedSearchUrls);

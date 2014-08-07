@@ -35,6 +35,7 @@ public class SmaphAnnotatorDebugger {
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source2SearchResult = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source3SearchResult = new HashMap<>();
 	private HashMap<String, HashSet<Integer>> result = new HashMap<>();
+	private HashMap<String, List<Pair<String, Vector<Pair<Integer, Integer>>>>> snippetsToBolds = new HashMap<>();
 
 	public void addProcessedQuery(String query) {
 		processedQueries.add(query);
@@ -141,6 +142,31 @@ public class SmaphAnnotatorDebugger {
 			tripleJs.put("bold", triple.getLeft());
 			tripleJs.put("rank", triple.getMiddle());
 			tripleJs.put("editDistance", triple.getRight());
+		}
+		return res;
+	}
+
+	public void addSnippets(String query,
+			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBold) {
+		this.snippetsToBolds.put(query, snippetsToBold);
+	}
+
+	public JSONArray getSnippets(String query) throws JSONException {
+		JSONArray res = new JSONArray();
+		List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds = this.snippetsToBolds
+				.get(query);
+		for (Pair<String, Vector<Pair<Integer, Integer>>> snippetsToBold : snippetsToBolds) {
+			JSONObject objI = new JSONObject();
+			res.put(objI);
+			objI.put("snippet", snippetsToBold.first);
+			JSONArray positionsI = new JSONArray();
+			objI.put("bold_positions", positionsI);
+			for (Pair<Integer, Integer> startAndLength : snippetsToBold.second) {
+				JSONObject position = new JSONObject();
+				positionsI.put(position);
+				position.put("start", startAndLength.first);
+				position.put("length", startAndLength.second);
+			}
 		}
 		return res;
 	}
@@ -309,6 +335,7 @@ public class SmaphAnnotatorDebugger {
 
 			/** Populate phase1 - source1 */
 			phase1S1.put("bolds", getBoldPositionEditDistance(query));
+			phase1S1.put("snippets", getSnippets(query));
 			phase1S1.put("filteredBolds", getBoldFilterOutput(query));
 			phase1S1.put("annotations", getReturnedAnnotations(query, wikiApi));
 			phase1S1.put("entityFeatures",
