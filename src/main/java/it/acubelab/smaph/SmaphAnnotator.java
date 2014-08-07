@@ -342,7 +342,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 							bolds.add(bold);
 							debugger.addQueryCandidateBolds(query, "Source 1",
 									ann.getConcept(), bolds);
-							debugger.addEntityFeaturesS1(query,
+							debugger.addEntityFeaturesS1(query, bold,
 									ann.getConcept(), ESFeatures, accept);
 							if (accept)
 								debugger.addResult(query, ann.getConcept());
@@ -713,7 +713,6 @@ public class SmaphAnnotator implements Sa2WSystem {
 
 		JSONObject result = null;
 		byte[] compressed = url2jsonCache.get(url.toExternalForm());
-		;
 		if (compressed != null)
 			result = new JSONObject(SmaphUtils.decompress(compressed));
 
@@ -772,7 +771,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 */
 	public static void setCache(String cacheFilename)
 			throws FileNotFoundException, IOException, ClassNotFoundException {
-		if (resultsCacheFilename != null && resultsCacheFilename.equals(cacheFilename))
+		if (resultsCacheFilename != null
+				&& resultsCacheFilename.equals(cacheFilename))
 			return;
 		System.out.println("Loading bing cache...");
 		resultsCacheFilename = cacheFilename;
