@@ -64,8 +64,7 @@ public class GenerateTrainingAndTest {
 						"datasets/smaph/smaph_training.xml", wikiApi), wikiApi,
 						wikiToFreebase);
 				gatherExamples(bingAnnotator, smaphTrain,
-						trainEntityFilterGatherer,
-						wikiToFreebase);
+						trainEntityFilterGatherer, wikiToFreebase);
 			}
 
 			{
@@ -73,24 +72,30 @@ public class GenerateTrainingAndTest {
 						"datasets/smaph/smaph_test.xml", wikiApi), wikiApi,
 						wikiToFreebase);
 				gatherExamples(bingAnnotator, smaphTest,
-						trainEntityFilterGatherer,
-						wikiToFreebase);
+						trainEntityFilterGatherer, wikiToFreebase);
 			}
 			{
 				C2WDataset smaphDevel = new ERDDatasetFilter(new SMAPHDataset(
 						"datasets/smaph/smaph_devel.xml", wikiApi), wikiApi,
 						wikiToFreebase);
 				gatherExamples(bingAnnotator, smaphDevel,
-						trainEntityFilterGatherer,
-						wikiToFreebase);
+						trainEntityFilterGatherer, wikiToFreebase);
 			}
 			{
 				C2WDataset yahoo = new ERDDatasetFilter(
 						new YahooWebscopeL24Dataset(
 								"datasets/yahoo_webscope_L24/ydata-search-query-log-to-entities-v1_0.xml"),
 						wikiApi, wikiToFreebase);
-				;
-				gatherExamples(bingAnnotator, yahoo, trainEntityFilterGatherer, wikiToFreebase);
+				gatherExamples(bingAnnotator, yahoo, trainEntityFilterGatherer,
+						wikiToFreebase);
+			}
+			{
+				C2WDataset erd = new ERDDatasetFilter(new ERD2014Dataset(
+						"datasets/erd2014/Trec_beta.query.txt",
+						"datasets/erd2014/Trec_beta.annotation.txt", freebApi,
+						wikiApi), wikiApi, wikiToFreebase);
+				gatherExamples(bingAnnotator, erd, trainEntityFilterGatherer,
+						wikiToFreebase);
 			}
 		}
 		if (develEntityFilterGatherer != null) {
@@ -103,7 +108,8 @@ public class GenerateTrainingAndTest {
 					develDs.getC2WGoldStandardList().size() - 1))
 				System.out.println(t.getConcept());
 
-			gatherExamples(bingAnnotator, develDs, develEntityFilterGatherer, wikiToFreebase);
+			gatherExamples(bingAnnotator, develDs, develEntityFilterGatherer,
+					wikiToFreebase);
 		}
 
 		SmaphAnnotator.flush();
@@ -116,9 +122,9 @@ public class GenerateTrainingAndTest {
 			double editDistanceSpotFilterThreshold, int wikiSearchTopK,
 			String bingKey) throws FileNotFoundException,
 			ClassNotFoundException, IOException {
-		WATAnnotator wikiSense = new WATAnnotator(
-				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
-				"0.0"/* minlp */, true, false, false);
+		WATAnnotator wikiSense = new WATAnnotator("wikisense.mkapp.it", 80,
+				"base", "PAGERANK", "jaccard", "0.6", "0.0"/* minlp */, false,
+				false, false);
 
 		SmaphAnnotator bingAnnotator = new SmaphAnnotator(wikiSense,
 				new EditDistanceBoldFilter(editDistanceSpotFilterThreshold),
@@ -133,8 +139,8 @@ public class GenerateTrainingAndTest {
 		// SmaphAnnotatorDebugger.disable();
 		String bingKey = "";
 		String freebKey = "";
-		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
-				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
+		WikipediaApiInterface wikiApi = new WikipediaApiInterface("wid.cache",
+				"redirect.cache");
 		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
 
 		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");
@@ -145,12 +151,11 @@ public class GenerateTrainingAndTest {
 		BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
 		BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
 		gatherExamplesTrainingAndDevel(bingAnnotator,
-				trainEntityFilterGatherer,
-				develEntityFilterGatherer, wikiApi,
+				trainEntityFilterGatherer, develEntityFilterGatherer, wikiApi,
 				wikiToFreebase, freebApi);
 		trainEntityFilterGatherer.dumpExamplesLibSvm("train_entityfilter.dat");
 		develEntityFilterGatherer.dumpExamplesLibSvm("devel_entityfilter.dat");
-		
+
 		SmaphAnnotator.flush();
 		wikiApi.flush();
 	}
