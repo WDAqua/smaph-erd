@@ -37,7 +37,7 @@ public class GenerateModel {
 
 	public static void main(String[] args) throws Exception {
 		Locale.setDefault(Locale.US);
-		String freebKey = "AIzaSyCRE0wurabdyQU2AJn1EO1KHzugGSeLLp4";
+		String freebKey = "";
 
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		String bingKey = SmaphConfig.getDefaultBingKey();
