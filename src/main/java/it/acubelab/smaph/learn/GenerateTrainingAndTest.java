@@ -87,8 +87,15 @@ public class GenerateTrainingAndTest {
 						new YahooWebscopeL24Dataset(
 								"datasets/yahoo_webscope_L24/ydata-search-query-log-to-entities-v1_0.xml"),
 						wikiApi, wikiToFreebase);
-				;
 				gatherExamples(bingAnnotator, yahoo, trainEntityFilterGatherer,
+						wikiToFreebase);
+			}
+			{
+				C2WDataset erd = new ERDDatasetFilter(new ERD2014Dataset(
+						"datasets/erd2014/Trec_beta.query.txt",
+						"datasets/erd2014/Trec_beta.annotation.txt", freebApi,
+						wikiApi), wikiApi, wikiToFreebase);
+				gatherExamples(bingAnnotator, erd, trainEntityFilterGatherer,
 						wikiToFreebase);
 			}
 		}
@@ -133,8 +140,8 @@ public class GenerateTrainingAndTest {
 		// SmaphAnnotatorDebugger.disable();
 		String bingKey = "";
 		String freebKey = "";
-		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
-				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
+		WikipediaApiInterface wikiApi = new WikipediaApiInterface("wid.cache",
+				"redirect.cache");
 		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
 
 		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");

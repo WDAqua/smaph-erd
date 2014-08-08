@@ -8,13 +8,13 @@ $('#query-input').keypress(function (event) {
 
 $('.activate-tooltip').tooltip()
 
-function setupPopoverContent(buttonTd, wid, widToFtrs){
+function setupPopoverContent(buttonTd, wid, features){
   buttonTd.append($( "<button>" ).attr("class", "btn btn-default glyphicon glyphicon-plus").attr("data-container", "body").attr("data-toggle", "popover").attr("type", "button"));
   table = $( "<table>" ).attr("class", "table");
   $( "<thead><tr><th>Feature name</th><th>Value</th></tr></thead>" ).appendTo(table);
   tbody = $( "<tbody>" );
   tbody.appendTo(table);
-  $.each(widToFtrs[wid], function(key, value){
+  $.each(features, function(key, value){
     $("<tr>").append($("<td>").html(key)).append($("<td>").html(value)).appendTo(tbody);
   });
   pop = buttonTd.popover({trigger: "focus", content: table, placement: "left", html: true, container:"body"})
@@ -61,11 +61,11 @@ function fillIn(query) {
 			  tr.appendTo("#filteredBoldsTable");
 			  $( "<td>" ).html(this).appendTo(tr);
 			});
-		 var widToFtrsS1 = {};
+		 var boldToFtrsS1 = {};
 		 var widToAcceptedS1 = {};
 		 $.each(qdata.phase1.source1.entityFeatures,
 			function (){
-			  widToFtrsS1[this.wid] = this.features;
+			  boldToFtrsS1[this.bold] = this.features;
 			  widToAcceptedS1[this.wid] = this.accepted;
 			});
 		$.each(qdata.phase1.source1.annotations,
@@ -87,7 +87,7 @@ function fillIn(query) {
 			    $("<span>").attr("class", "glyphicon glyphicon-remove red").appendTo(acceptedTd);
 			  
 			  //setup popover for feature button
-			  setupPopoverContent(buttonTd, this.wid, widToFtrsS1);
+			  setupPopoverContent(buttonTd, this.wid, boldToFtrsS1[this.bold]);
 			});
 		 var widToFtrsS2 = {};
 		 var widToAcceptedS2 = {};

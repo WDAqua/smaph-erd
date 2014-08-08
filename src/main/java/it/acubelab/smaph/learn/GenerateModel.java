@@ -37,13 +37,13 @@ public class GenerateModel {
 
 	public static void main(String[] args) throws Exception {
 		Locale.setDefault(Locale.US);
-		String freebKey = "<FREEBASE_KEY>";
+		String freebKey = "AIzaSyCRE0wurabdyQU2AJn1EO1KHzugGSeLLp4";
 
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		String bingKey = SmaphConfig.getDefaultBingKey();
 
 		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
-				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
+				"wid.cache", "redirect.cache");
 		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
 		double[][] paramsToTest = new double[][] {
 		/*
@@ -65,12 +65,21 @@ public class GenerateModel {
 
 		/*
 		 * { 3, 4 }
-		 */{ 3.8, 6.0 }
+		 */
+				{ 3.8, 3 },
+				{ 3.8, 4 },
+				{ 3.8, 5 },
+				{ 3.8, 6 },
+				{ 3.8, 7 },
+				{ 3.8, 8 },
+				{ 3.8, 9 },
+				{ 3.8, 10 },
+				
 
 		};
-		Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3, 6, 7, 8,
-				9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-				25 },
+		Integer[][] featuresSetsToTest = new Integer[][] {
+				//{ 1, 2, 3, 6, 7, 8,	9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
+				{ 1, 2, 3, 6, 7, 9, 10, 11,12,13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
 		/*
 		 * { 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
 		 */

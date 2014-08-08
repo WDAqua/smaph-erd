@@ -29,12 +29,14 @@ public class SmaphAnnotatorDebugger {
 	private HashMap<String, List<Triple<String, Integer, Double>>> boldPositionED = new HashMap<>();
 	private HashMap<String, List<String>> boldFilterOutput = new HashMap<>();
 	private HashMap<String, List<Pair<String, Integer>>> returnedAnnotations = new HashMap<>();
+	private HashMap<String, HashMap<Triple<Integer, HashMap<String, Double>, Boolean>, String>> ftrToBoldS1 = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS1 = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS2 = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS3 = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source2SearchResult = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source3SearchResult = new HashMap<>();
 	private HashMap<String, HashSet<Integer>> result = new HashMap<>();
+	private HashMap<String, List<Pair<String, Vector<Pair<Integer, Integer>>>>> snippetsToBolds = new HashMap<>();
 
 	public void addProcessedQuery(String query) {
 		processedQueries.add(query);
@@ -145,6 +147,31 @@ public class SmaphAnnotatorDebugger {
 		return res;
 	}
 
+	public void addSnippets(String query,
+			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBold) {
+		this.snippetsToBolds.put(query, snippetsToBold);
+	}
+
+	public JSONArray getSnippets(String query) throws JSONException {
+		JSONArray res = new JSONArray();
+		List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds = this.snippetsToBolds
+				.get(query);
+		for (Pair<String, Vector<Pair<Integer, Integer>>> snippetsToBold : snippetsToBolds) {
+			JSONObject objI = new JSONObject();
+			res.put(objI);
+			objI.put("snippet", snippetsToBold.first);
+			JSONArray positionsI = new JSONArray();
+			objI.put("bold_positions", positionsI);
+			for (Pair<Integer, Integer> startAndLength : snippetsToBold.second) {
+				JSONObject position = new JSONObject();
+				positionsI.put(position);
+				position.put("start", startAndLength.first);
+				position.put("length", startAndLength.second);
+			}
+		}
+		return res;
+	}
+
 	public void addBoldFilterOutput(String query, List<String> bolds) {
 		this.boldFilterOutput.put(query, bolds);
 	}
@@ -180,9 +207,16 @@ public class SmaphAnnotatorDebugger {
 		return res;
 	}
 
-	public void addEntityFeaturesS1(String query, int wid,
+	public void addEntityFeaturesS1(String query, String bold, int wid,
 			HashMap<String, Double> features, boolean accepted) {
-		addEntityFeatures(this.entityFeaturesS1, query, wid, features, accepted);
+		ImmutableTriple<Integer, HashMap<String, Double>, Boolean> ftrTriple = addEntityFeatures(
+				this.entityFeaturesS1, query, wid, features, accepted);
+
+		if (!ftrToBoldS1.containsKey(query))
+			ftrToBoldS1
+					.put(query,
+							new HashMap<Triple<Integer, HashMap<String, Double>, Boolean>, String>());
+		ftrToBoldS1.get(query).put(ftrTriple, bold);
 	}
 
 	public void addEntityFeaturesS2(String query, int wid,
@@ -195,7 +229,7 @@ public class SmaphAnnotatorDebugger {
 		addEntityFeatures(this.entityFeaturesS3, query, wid, features, accepted);
 	}
 
-	private void addEntityFeatures(
+	private ImmutableTriple<Integer, HashMap<String, Double>, Boolean> addEntityFeatures(
 			HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> source,
 			String query, int wid, HashMap<String, Double> features,
 			boolean accepted) {
@@ -203,7 +237,10 @@ public class SmaphAnnotatorDebugger {
 			source.put(
 					query,
 					new Vector<Triple<Integer, HashMap<String, Double>, Boolean>>());
-		source.get(query).add(new ImmutableTriple<>(wid, features, accepted));
+		ImmutableTriple<Integer, HashMap<String, Double>, Boolean> ftrTriple = new ImmutableTriple<>(
+				wid, features, accepted);
+		source.get(query).add(ftrTriple);
+		return ftrTriple;
 	}
 
 	private JSONArray getEntityFeatures(
@@ -216,6 +253,9 @@ public class SmaphAnnotatorDebugger {
 					.get(query)) {
 				JSONObject pairJs = new JSONObject();
 				res.put(pairJs);
+				String bold = ftrToBoldS1.get(query).get(p);
+				if (bold != null)
+					pairJs.put("bold", bold);
 				pairJs.put("wid", p.getLeft());
 				pairJs.put("title", wikiApi.getTitlebyId(p.getLeft()));
 				pairJs.put("url", widToUrl(p.getLeft(), wikiApi));
@@ -309,6 +349,7 @@ public class SmaphAnnotatorDebugger {
 
 			/** Populate phase1 - source1 */
 			phase1S1.put("bolds", getBoldPositionEditDistance(query));
+			phase1S1.put("snippets", getSnippets(query));
 			phase1S1.put("filteredBolds", getBoldFilterOutput(query));
 			phase1S1.put("annotations", getReturnedAnnotations(query, wikiApi));
 			phase1S1.put("entityFeatures",

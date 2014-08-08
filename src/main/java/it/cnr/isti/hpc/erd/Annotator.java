@@ -20,6 +20,7 @@ import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.boldfilters.*;
 import it.acubelab.smaph.entityfilters.*;
 import it.acubelab.smaph.learn.GenerateModel;
+import it.acubelab.smaph.linkback.BaselineLinkBack;
 import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.acubelab.batframework.problems.CandidatesSpotter;
 import it.acubelab.batframework.problems.Sa2WSystem;
@@ -225,21 +226,32 @@ public class Annotator {
 		int topKRelatedSearch = 0;
 
 		{
-			double[][] paramsToTest = new double[][] { { 0.01, 1 },
+			double[][] paramsToTest = new double[][] { /*{ 0.01, 1 },
 					{ 0.01, 5 }, { 0.01, 10 }, { 0.03, 1 }, { 0.03, 5 },
 					{ 0.03, 10 }, { 0.044, 1 }, { 0.044, 5 }, { 0.044, 10 },
-					{ 0.06, 1 }, { 0.06, 5 }, { 0.06, 10 },
-
+					{ 0.06, 1 }, { 0.06, 5 }, { 0.06, 10 },*/
+					{ 0.03, 5 },
 			};
 			double[][] weightsToTest = new double[][] {
 
 			/* { 3, 4 }, */
-			{ 3.8, 6 }
+					{ 3.8, 10.0 },
+					{ 3.8, 11.0 },
+					{ 3.8, 12.0 },
+					{ 3.8, 13.0 },
+					{ 3.8, 14.0 },
+					{ 3.8, 15.0 },
+					{ 3.8, 16.0 },
+					{ 3.8, 17.0 },
+					{ 3.8, 18.0 },
+					{ 3.8, 19.0 },
+					{ 3.8, 20.0 },
 
 			};
-			Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3, 6, 7,
+			Integer[][] featuresSetsToTest = new Integer[][] { /*{ 1, 2, 3, 6, 7,
 					8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-					23, 24, 25 },
+					23, 24, 25 },*/
+					{ 1, 2, 3, 6, 7, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
 			/* { 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},}; */
 			};
 			/*
@@ -407,7 +419,7 @@ public class Annotator {
 
 			List<Annotation> res = annotatePure(query, textID,
 					new SmaphAnnotator(auxAnnotatorService, spotFilter,
-							entityFilter, new DummyLinkBack(),
+							entityFilter, new BaselineLinkBack(),
 							includeSourceAnnotator, includeSourceNormalSearch,
 							includeSourceWikiSearch, wikiSearchPages,
 							includeSourceAnnotatorCandidates,
