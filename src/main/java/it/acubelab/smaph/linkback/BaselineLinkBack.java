@@ -1,15 +1,22 @@
 package it.acubelab.smaph.linkback;
 
 import it.acubelab.batframework.data.*;
+import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphUtils;
 
+import java.io.IOException;
 import java.util.*;
 
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 
 public class BaselineLinkBack implements LinkBack {
-
+	WikipediaApiInterface wikiApi;
+	
+	public BaselineLinkBack(WikipediaApiInterface api){
+		this.wikiApi = api;
+	}
+	
 	private class CompareTripleByScore implements
 			Comparator<Triple<Double, String[], Tag>> {
 		@Override
@@ -42,6 +49,15 @@ public class BaselineLinkBack implements LinkBack {
 					bestDistance = minED;
 				}
 			}
+			String title = "";
+			try {
+				title = wikiApi.getTitlebyId(boldsToEntities.get(bolds).getConcept());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if (bestDistance > SmaphUtils.getMinEditDist(query, title)){
+				bestDistance = SmaphUtils.getMinEditDist(query, title);
+			}
 			boldToEntities.put(bestBold, boldsToEntities.get(bolds));
 		}
 
@@ -68,7 +84,7 @@ public class BaselineLinkBack implements LinkBack {
 		int[] tokenPositions = new int[tokens.size()];
 		int lastPos = 0;
 		for (int i = 0; i < tokenPositions.length; i++) {
-			lastPos = query.indexOf(tokens.get(i), lastPos);
+			lastPos = query.toLowerCase().indexOf(tokens.get(i), lastPos);
 			tokenPositions[i] = lastPos;
 		}
 		HashSet<Integer> toCover = new HashSet<>();
