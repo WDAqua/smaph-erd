@@ -124,7 +124,7 @@ public class GenerateTrainingAndTest {
 			String bingKey) throws FileNotFoundException,
 			ClassNotFoundException, IOException {
 		WATAnnotator wikiSense = new WATAnnotator("wikisense.mkapp.it", 80,
-				"base", "PAGERANK", "jaccard", "0.6", "0.0"/* minlp */, true,
+				"base", "PAGERANK", "jaccard", "0.6", "0.0"/* minlp */, false,
 				false, false);
 
 		SmaphAnnotator bingAnnotator = new SmaphAnnotator(wikiSense,
