@@ -15,7 +15,7 @@ public class BaselineLinkBackTest {
 
 	@Test
 	public void testLinkBack() {
-		BaselineLinkBack lb = new BaselineLinkBack();
+		BaselineLinkBack lb = new BaselineLinkBack(null);
 		{
 			String query = "armstrong mon   lading";
 			HashMap<String[], Tag> boldsToEntities = new HashMap<>();
