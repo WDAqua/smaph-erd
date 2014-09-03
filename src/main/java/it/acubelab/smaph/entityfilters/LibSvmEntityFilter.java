@@ -45,17 +45,29 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 			"s1_avgRank",
 			"s1_ambiguity",
 			"s1_pageRank", //
-			"s2_editDistance", "s2_rank",
-			"s2_webTotalWiki",
+			"s2_editDistanceTitle",
+			"s2_rank",
+			"s2_wikiWebTotal",
 			"s2_webTotal",
 			"s3_rank",
 			"s3_wikiWebTotal", // 20
-			"s3_editDistanceTitle", "s3_editDistanceNoPar",
-			"s3_editDistanceBolds", "s3_capitalizedBolds", "s3_avgBoldsWords",
-			"s5_rank", "s5_wikiWebTotal", "s5_editDistanceTitle",
-			"s5_editDistanceNoPar", "s5_editDistanceBolds", // 30
-			"s5_capitalizedBolds", "s5_avgBoldsWords",
-
+			"s3_editDistanceTitle",
+			"s3_editDistanceNoPar",
+			"s3_editDistanceBolds",
+			"s3_capitalizedBolds",
+			"s3_avgBoldsWords",
+			"s5_rank",
+			"s5_wikiWebTotal",
+			"s5_editDistanceTitle",
+			"s5_editDistanceNoPar",
+			"s5_editDistanceBolds", // 30
+			"s5_capitalizedBolds",
+			"s5_avgBoldsWords",
+			"s3_webTotal",
+			"s2_editDistanceNoPar",
+			"s2_editDistanceBolds",
+			"s2_capitalizedBolds",
+			"s2_avgBoldsWords", // 37
 	};
 
 	public LibSvmEntityFilter(String modelFileBase) throws IOException {
@@ -124,16 +136,16 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 				found = sourceFtrCount == 9
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s2_"))
-				found = sourceFtrCount == 4
+				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s3_"))
-				found = sourceFtrCount == 7
+				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s4_"))
 				found = sourceFtrCount == 0
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s5_"))
-				found = sourceFtrCount == 7
+				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + 1;
 
 			if (found)
