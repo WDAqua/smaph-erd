@@ -45,11 +45,14 @@ public class Annotator {
 	public Annotator() {
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		bingKey = SmaphConfig.getDefaultBingKey();
-
+		String bingCache = SmaphConfig.getDefaultBingCache();
+		
 		try {
 			if (wikiApi == null)
 				wikiApi = new WikipediaApiInterface("wid.cache",
 						"redirect.cache");
+			if (bingCache != null)
+				SmaphAnnotator.setCache(bingCache);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
@@ -235,23 +238,14 @@ public class Annotator {
 			double[][] weightsToTest = new double[][] {
 
 			/* { 3, 4 }, */
-					{ 3.8, 10.0 },
-					{ 3.8, 11.0 },
-					{ 3.8, 12.0 },
-					{ 3.8, 13.0 },
-					{ 3.8, 14.0 },
-					{ 3.8, 15.0 },
-					{ 3.8, 16.0 },
-					{ 3.8, 17.0 },
-					{ 3.8, 18.0 },
-					{ 3.8, 19.0 },
-					{ 3.8, 20.0 },
-
+					{ 3.8, 5.6 },
 			};
-			Integer[][] featuresSetsToTest = new Integer[][] { /*{ 1, 2, 3, 6, 7,
-					8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-					23, 24, 25 },*/
-					{ 1, 2, 3, 6, 7, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
+			Integer[][] featuresSetsToTest = new Integer[][] {
+					//{ 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
+					  //{ 1, 2, 3, 6, 7,    9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
+
+					{ 1, 2, 3, 6, 7, 9, 10, 11,12,13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37 },
+					
 			/* { 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},}; */
 			};
 			/*
@@ -273,10 +267,10 @@ public class Annotator {
 						"ftr_test_XXX_XXX_XXX".length()));
 				double edThr = Double.parseDouble(runId.substring(
 						"ftr_test_XXX_XXX_XXX_".length(),
-						"ftr_test_XXX_XXX_XXX_XXX".length()));
+						"ftr_test_XXX_XXX_XXX_XXXX".length()));
 				int idParam = Integer.parseInt(runId.substring(
-						"ftr_test_XXX_XXX__XXX_XXX".length(),
-						"ftr_test_XXX_XXX_XXX_XXX_XXX".length()));
+						"ftr_test_XXX_XXX_XXX_XXXX_".length(),
+						"ftr_test_XXX_XXX_XXX_XXXX_XXX".length()));
 
 				String sourcesString = "";
 				for (char c : sources.toCharArray())
@@ -298,7 +292,7 @@ public class Annotator {
 						+ "_" + sources;
 				runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
 						"COMMONNESS", "base", "mw", 0.6f,
-						"EditDistanceSpotFilter", edThr, "SvmEntityFilter",
+						"Frequency", edThr, "SvmEntityFilter",
 						modelFileEF, "NoEmptyQueryFilter", "null",
 						sourcesString);
 
@@ -419,7 +413,7 @@ public class Annotator {
 
 			List<Annotation> res = annotatePure(query, textID,
 					new SmaphAnnotator(auxAnnotatorService, spotFilter,
-							entityFilter, new BaselineLinkBack(),
+							entityFilter, new DummyLinkBack(),
 							includeSourceAnnotator, includeSourceNormalSearch,
 							includeSourceWikiSearch, wikiSearchPages,
 							includeSourceAnnotatorCandidates,

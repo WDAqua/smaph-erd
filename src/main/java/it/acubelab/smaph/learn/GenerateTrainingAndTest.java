@@ -26,6 +26,7 @@ import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
+import it.acubelab.smaph.boldfilters.FrequencyBoldFilter;
 import it.acubelab.smaph.entityfilters.NoEntityFilter;
 import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.acubelab.smaph.main.ERDDatasetFilter;
@@ -128,7 +129,7 @@ public class GenerateTrainingAndTest {
 				false, false);
 
 		SmaphAnnotator bingAnnotator = new SmaphAnnotator(wikiSense,
-				new EditDistanceBoldFilter(editDistanceSpotFilterThreshold),
+				new FrequencyBoldFilter((float)editDistanceSpotFilterThreshold),
 				new NoEntityFilter(), new DummyLinkBack(), true, true, true,
 				wikiSearchTopK, false, 0, false, 0, wikiApi, bingKey);
 
