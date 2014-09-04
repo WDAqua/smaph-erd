@@ -20,6 +20,8 @@ import it.acubelab.batframework.metrics.*;
 import it.acubelab.batframework.utils.*;
 import it.acubelab.batframework.utils.Pair;
 import it.acubelab.smaph.*;
+import it.acubelab.smaph.learn.GenerateTrainingAndTest.OptDataset;
+import it.acubelab.smaph.learn.TuneModel.OptimizaionProfiles;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.IOException;
@@ -37,7 +39,7 @@ public class TuneModel {
 		MAXIMIZE_TN, MAXIMIZE_MICRO_F1, MAXIMIZE_MACRO_F1
 	}
 
-	public static svm_parameter getParameters(double wPos, double wNeg,
+	public static svm_parameter getParametersEF(double wPos, double wNeg,
 			double gamma, double C) {
 		svm_parameter param = new svm_parameter();
 		param.svm_type = svm_parameter.C_SVC;
@@ -57,12 +59,85 @@ public class TuneModel {
 		param.weight = new double[] { wPos, wNeg };
 		return param;
 	}
+	
+	public static svm_parameter getParametersLB(
+			double gamma, double c) {
+		svm_parameter param = new svm_parameter();
+		param.svm_type = svm_parameter.EPSILON_SVR;
+		param.kernel_type = svm_parameter.LINEAR;
+		param.degree = 2;
+		param.gamma = gamma;
+		param.coef0 = 0;
+		param.nu = 0.5;
+		param.cache_size = 100;
+		param.C = c;
+		param.eps = 0.001;
+		param.p = 0.1;
+		param.shrinking = 1;
+		param.probability = 0;
+		param.nr_weight = 2;
+		param.weight_label = new int[] { };
+		param.weight = new double[] { };
+		return param;	}
 
-	public static svm_model trainModel(double wPos, double wNeg,
-			Vector<Integer> pickedFtrs, svm_problem trainProblem, double gamma,
-			double C) {
-		svm_parameter param = getParameters(wPos, wNeg, gamma, C);
 
+
+	public static void main(String[] args) throws Exception {
+		Locale.setDefault(Locale.US);
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		String bingKey = SmaphConfig.getDefaultBingKey();
+		String freebKey = SmaphConfig.getDefaultFreebaseKey();
+		String freebCache = SmaphConfig.getDefaultFreebaseKey();
+		SmaphAnnotator.setCache(SmaphConfig.getDefaultBingCache());
+
+		WikipediaApiInterface wikiApi = new WikipediaApiInterface("wid.cache",
+				"redirect.cache");
+		FreebaseApi freebApi = new FreebaseApi(freebKey, freebCache);
+
+		Vector<ModelConfigurationResult> bestEFModels = new Vector<>();
+		int wikiSearchTopK = 10; // <======== mind this
+		double gamma = 0.03;
+		double C = 5.0;
+		OptDataset opt = OptDataset.SMAPH_DATASET;
+		for (double boldFilterThr = 0.06; boldFilterThr <= 0.06; boldFilterThr += 0.1) {
+			WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase(
+					"mapdb");
+
+			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
+					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
+							boldFilterThr, wikiSearchTopK, bingKey);
+
+			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
+			BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
+			ExampleGatherer trainLinkBackGatherer = new ExampleGatherer();
+			ExampleGatherer develLinkBackGatherer = new ExampleGatherer();
+			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
+					bingAnnotator, trainEntityFilterGatherer,
+					develEntityFilterGatherer,trainLinkBackGatherer, develLinkBackGatherer ,wikiApi, wikiToFreebase,
+					freebApi, opt);
+
+			Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> modelAndStatsEF = trainIterative(
+					trainEntityFilterGatherer, develEntityFilterGatherer,
+					boldFilterThr, OptimizaionProfiles.MAXIMIZE_MACRO_F1, -1.0,
+					gamma, C);
+			for (ModelConfigurationResult res : modelAndStatsEF.first)
+				System.out.println(res.getReadable());
+
+			bestEFModels.add(modelAndStatsEF.second);
+			System.gc();
+		}
+
+		for (ModelConfigurationResult modelAndStatsEF : bestEFModels)
+			System.out.println("Best EF:" + modelAndStatsEF.getReadable());
+
+		System.out.println("Flushing Bing API...");
+
+		SmaphAnnotator.flush();
+		wikiApi.flush();
+	}
+
+	public static svm_model trainModel(svm_parameter param, 
+			Vector<Integer> pickedFtrs, svm_problem trainProblem) {
 		String error_msg = svm.svm_check_parameter(trainProblem, param);
 
 		if (error_msg != null) {
@@ -74,7 +149,7 @@ public class TuneModel {
 	}
 
 	public static Triple<svm_problem, double[], double[]> getScaledTrainProblem(
-			Vector<Integer> pickedFtrsI, BinaryExampleGatherer gatherer) {
+			Vector<Integer> pickedFtrsI, ExampleGatherer gatherer) {
 		Collections.sort(pickedFtrsI);
 
 		// find ranges for all features of training set
@@ -94,7 +169,7 @@ public class TuneModel {
 	}
 
 	public static List<svm_problem> getScaledTestProblems(
-			Vector<Integer> pickedFtrsI, BinaryExampleGatherer testGatherer,
+			Vector<Integer> pickedFtrsI, ExampleGatherer testGatherer,
 			double[] mins, double[] maxs) {
 		List<svm_problem> testProblems = testGatherer
 				.generateLibSvmProblemOnePerInstance(pickedFtrsI);
@@ -105,7 +180,7 @@ public class TuneModel {
 
 	private static Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> trainIterative(
 			BinaryExampleGatherer trainGatherer,
-			BinaryExampleGatherer develGatherer, double editDistanceThreshold,
+			BinaryExampleGatherer develGatherer, double boldFilterThreshold,
 			OptimizaionProfiles optProfile, double optProfileThreshold,
 			double gamma, double C) {
 
@@ -128,8 +203,8 @@ public class TuneModel {
 			Pair<Double, Double> bestBroadWeights = new WeightSelector(
 					broadwPosMin, broadwPosMax, broadkPos, broadwNegMin,
 					broadwNegMax, 1.0, gamma, C, broadSteps,
-					editDistanceThreshold, allFtrs, trainGatherer,
-					develGatherer, optProfile, globalScoreboard).call();
+					boldFilterThreshold, allFtrs, trainGatherer, develGatherer,
+					optProfile, globalScoreboard).call();
 			bestwPos = bestBroadWeights.first;
 			bestwNeg = bestBroadWeights.second;
 		} catch (Exception e) {
@@ -149,30 +224,39 @@ public class TuneModel {
 
 		ModelConfigurationResult bestResult = ModelConfigurationResult
 				.findBest(globalScoreboard, optProfile, optProfileThreshold);
-		;
+
 		for (int iteration = 0; iteration < iterations; iteration++) {
 			// Do feature selection
-			/*
-			 * ModelConfigurationResult bestFtr; {
-			 * Vector<ModelConfigurationResult> scoreboardFtrSelection = new
-			 * Vector<>(); new AblationFeatureSelector(bestwPos, bestwNeg,
-			 * editDistanceThreshold, trainGatherer, develGatherer, optProfile,
-			 * optProfileThreshold, scoreboardFtrSelection) .run(); bestFtr =
-			 * ModelConfigurationResult .findBest(scoreboardFtrSelection,
-			 * optProfile, optProfileThreshold);
-			 * globalScoreboard.addAll(scoreboardFtrSelection);
-			 * System.err.printf("Done feature selection (iteration %d).%n",
-			 * iteration); } Vector<Integer> bestFeatures =
-			 * bestFtr.getFeatures();
-			 */
-			Vector<Integer> bestFeatures = allFtrs;
-			{ // Fine-tune weights
+			ModelConfigurationResult bestFtr;
+			{
+				Vector<ModelConfigurationResult> scoreboardFtrSelection = new Vector<>();
+				
+				  new AblationFeatureSelector(bestwPos, bestwNeg, gamma, C,
+				  boldFilterThreshold, trainGatherer, develGatherer,
+				  optProfile, optProfileThreshold, scoreboardFtrSelection)
+				  .run();
+				 
+				/*new IncrementalFeatureSelector(bestwPos, bestwNeg, gamma, C,
+						boldFilterThreshold, trainGatherer, develGatherer,
+						optProfile, optProfileThreshold, scoreboardFtrSelection)
+						.run();*/
+				bestFtr = ModelConfigurationResult
+						.findBest(scoreboardFtrSelection, optProfile,
+								optProfileThreshold);
+				globalScoreboard.addAll(scoreboardFtrSelection);
+				System.err.printf("Done feature selection (iteration %d).%n",
+						iteration);
+			}
+			Vector<Integer> bestFeatures = bestFtr.getFeatures();
+
+			// Fine-tune weights
+			{
 				Vector<ModelConfigurationResult> scoreboardWeightsTuning = new Vector<>();
 				Pair<Double, Double> weights;
 				try {
 					weights = new WeightSelector(finewPosMin, finewPosMax, -1,
 							finewNegMin, finewNegMax, -1, gamma, C, fineSteps,
-							editDistanceThreshold, bestFeatures, trainGatherer,
+							boldFilterThreshold, bestFeatures, trainGatherer,
 							develGatherer, optProfile, scoreboardWeightsTuning)
 							.call();
 				} catch (Exception e) {
@@ -208,125 +292,10 @@ public class TuneModel {
 
 	}
 
-	public static void main(String[] args) throws Exception {
-		Locale.setDefault(Locale.US);
-		String freebKey = "<FREEBASE_KEY>";
-		String bingKey = "<BING_KEY>";
-
-		WikipediaApiInterface wikiApi = new WikipediaApiInterface(
-				"benchmark/cache/wid.cache", "benchmark/cache/redirect.cache");
-		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
-
-		Vector<ModelConfigurationResult> bestEQFModels = new Vector<>();
-		Vector<ModelConfigurationResult> bestEFModels = new Vector<>();
-		int wikiSearchTopK = 5; // <======== mind this
-		double gamma = 1.0;
-		double C = 1.0;
-		for (double editDistanceThr = 0.7; editDistanceThr <= 0.7; editDistanceThr += 0.1) {
-			WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase(
-					"mapdb");
-
-			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
-					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
-							editDistanceThr, wikiSearchTopK, bingKey);
-			SmaphAnnotator.setCache("bing.cache.full");
-
-			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
-			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
-					bingAnnotator, trainEntityFilterGatherer,
-					develEntityFilterGatherer, wikiApi, wikiToFreebase,
-					freebApi);
-
-			SmaphAnnotator.unSetCache();
-
-			Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> modelAndStatsEF = trainIterative(
-					trainEntityFilterGatherer, develEntityFilterGatherer,
-					editDistanceThr, OptimizaionProfiles.MAXIMIZE_MACRO_F1,
-					-1.0, gamma, C);
-			/*
-			 * Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult>
-			 * modelAndStatsEF = trainIterative( trainEmptyQueryGatherer,
-			 * develEmptyQueryGatherer, editDistanceThr,
-			 * OptimizaionProfiles.MAXIMIZE_TN, 0.02);
-			 */
-			/*
-			 * for (ModelConfigurationResult res : modelAndStatsEQF.first)
-			 * System.out.println(res.getReadable());
-			 */
-			for (ModelConfigurationResult res : modelAndStatsEF.first)
-				System.out.println(res.getReadable());
-
-			/* bestEQFModels.add(modelAndStatsEQF.second); */
-			bestEFModels.add(modelAndStatsEF.second);
-			System.gc();
-		}
-
-		for (ModelConfigurationResult modelAndStatsEQF : bestEQFModels)
-			System.out.println("Best EQF:" + modelAndStatsEQF.getReadable());
-		for (ModelConfigurationResult modelAndStatsEF : bestEFModels)
-			System.out.println("Best EF:" + modelAndStatsEF.getReadable());
-
-		System.out.println("Flushing Bing API...");
-
-		SmaphAnnotator.flush();
-		wikiApi.flush();
-	}
-
-	private static void dumpTrainingData(svm_problem problem) {
-		for (int i = 0; i < problem.l; i++) {
-			svm_node[] nodes = problem.x[i];
-			double value = problem.y[i];
-			String nodesStr = "";
-			for (svm_node node : nodes)
-				nodesStr += String.format("%d:%f ", node.index, node.value);
-			System.out.printf("%svalue=%.3f%n", nodesStr, value);
-		}
-
-	}
-
-	private static void do_cross_validation(svm_problem prob,
-			svm_parameter param) {
-		int i;
-		int total_correct = 0;
-		double total_error = 0;
-		double sumv = 0, sumy = 0, sumvv = 0, sumyy = 0, sumvy = 0;
-		double[] target = new double[prob.l];
-
-		svm.svm_cross_validation(prob, param, 2, target);
-		if (param.svm_type == svm_parameter.EPSILON_SVR
-				|| param.svm_type == svm_parameter.NU_SVR) {
-			for (i = 0; i < prob.l; i++) {
-				double y = prob.y[i];
-				double v = target[i];
-				total_error += (v - y) * (v - y);
-				sumv += v;
-				sumy += y;
-				sumvv += v * v;
-				sumyy += y * y;
-				sumvy += v * y;
-			}
-			System.out.print("Cross Validation Mean squared error = "
-					+ total_error / prob.l + "\n");
-			System.out
-					.print("Cross Validation Squared correlation coefficient = "
-							+ ((prob.l * sumvy - sumv * sumy) * (prob.l * sumvy - sumv
-									* sumy))
-							/ ((prob.l * sumvv - sumv * sumv) * (prob.l * sumyy - sumy
-									* sumy)) + "\n");
-		} else {
-			for (i = 0; i < prob.l; i++)
-				if (target[i] == prob.y[i])
-					++total_correct;
-			System.out.print("Cross Validation Accuracy = " + 100.0
-					* total_correct / prob.l + "%\n");
-		}
-	}
-
 	public static class ParameterTester implements
 			Callable<ModelConfigurationResult> {
 		private double wPos, wNeg, editDistanceThreshold, gamma, C;
-		private BinaryExampleGatherer trainEQFGatherer;
+		private BinaryExampleGatherer trainGatherer;
 		private BinaryExampleGatherer testGatherer;
 		private Vector<Integer> features;
 		Vector<ModelConfigurationResult> scoreboard;
@@ -342,7 +311,7 @@ public class TuneModel {
 			this.wNeg = wNeg;
 			this.editDistanceThreshold = editDistanceThreshold;
 			this.features = features;
-			this.trainEQFGatherer = trainEQFGatherer;
+			this.trainGatherer = trainEQFGatherer;
 			this.testGatherer = testEQFGatherer;
 			Collections.sort(this.features);
 			this.scoreboard = scoreboard;
@@ -353,17 +322,6 @@ public class TuneModel {
 		public static MetricsResultSet computeMetrics(svm_model model,
 				List<svm_problem> testProblems) throws IOException {
 			// Compute metrics
-			/*
-			 * { int tp = 0, fp = 0, fn = 0, tn = 0; for (int i = 0; i <
-			 * testProblem.l; i++) { svm_node[] svmNode = testProblem.x[i];
-			 * double gold = testProblem.y[i]; double pred =
-			 * svm.svm_predict(model, svmNode); if (gold > 0 && pred > 0) tp++;
-			 * if (gold < 0 && pred > 0) fp++; if (gold > 0 && pred < 0) fn++;
-			 * if (gold < 0 && pred < 0) tn++; } float f1 =
-			 * Metrics.F1(Metrics.recall(tp, fp, fn), Metrics.precision(tp,
-			 * fp)); float fnRate = (float) fn / (float) (fn + tp); }
-			 */
-
 			List<HashSet<Integer>> outputOrig = new Vector<>();
 			List<HashSet<Integer>> goldStandardOrig = new Vector<>();
 			for (svm_problem testProblem : testProblems) {
@@ -393,13 +351,15 @@ public class TuneModel {
 		public ModelConfigurationResult call() throws Exception {
 
 			Triple<svm_problem, double[], double[]> ftrsMinsMaxs = getScaledTrainProblem(
-					this.features, trainEQFGatherer);
+					this.features, trainGatherer);
 			double[] mins = ftrsMinsMaxs.getMiddle();
 			double[] maxs = ftrsMinsMaxs.getRight();
 			svm_problem trainProblem = ftrsMinsMaxs.getLeft();
 
-			svm_model model = trainModel(wPos, wNeg, this.features,
-					trainProblem, gamma, C);
+			svm_parameter param = getParametersEF(wPos, wNeg, gamma, C);
+
+			svm_model model = trainModel(param, this.features,
+					trainProblem);
 
 			// Generate test problem and scale it.
 			List<svm_problem> testProblems = getScaledTestProblems(
@@ -432,10 +392,10 @@ public class TuneModel {
 	static class WeightSelector implements Callable<Pair<Double, Double>> {
 		private double wPosMin, wPosMax, wNegMin, wNegMax, gamma, C;
 		private double optProfileThreshold;
-		private BinaryExampleGatherer trainEQFGatherer;
-		private BinaryExampleGatherer testEQFGatherer;
+		private BinaryExampleGatherer trainGatherer;
+		private BinaryExampleGatherer testGatherer;
 		private OptimizaionProfiles optProfile;
-		private double editDistanceThreshold;
+		private double boldFilterThreshold;
 		private double kappaPos, kappaNeg;
 		private Vector<Integer> features;
 		Vector<ModelConfigurationResult> scoreboard;
@@ -443,7 +403,7 @@ public class TuneModel {
 
 		public WeightSelector(double wPosMin, double wPosMax, double kappaPos,
 				double wNegMin, double wNegMax, double kappaNeg, double gamma,
-				double C, int steps, double editDistanceThreshold,
+				double C, int steps, double boldFilterThreshold,
 				Vector<Integer> features,
 				BinaryExampleGatherer trainEQFGatherer,
 				BinaryExampleGatherer testEQFGatherer,
@@ -471,11 +431,13 @@ public class TuneModel {
 			this.kappaNeg = kappaNeg;
 			this.kappaPos = kappaPos;
 			this.features = features;
-			this.trainEQFGatherer = trainEQFGatherer;
-			this.testEQFGatherer = testEQFGatherer;
+			this.trainGatherer = trainEQFGatherer;
+			this.testGatherer = testEQFGatherer;
 			this.optProfile = optProfile;
-			this.editDistanceThreshold = editDistanceThreshold;
+			this.boldFilterThreshold = boldFilterThreshold;
 			this.scoreboard = scoreboard;
+			this.C = C;
+			this.gamma = gamma;
 			this.steps = steps;
 		}
 
@@ -511,8 +473,8 @@ public class TuneModel {
 				for (int negI = 0; (wNeg = computeWeight(wNegMax, wNegMin,
 						kappaNeg, negI, steps)) <= wNegMax; negI++)
 					futures.add(execServ.submit(new ParameterTester(wPos, wNeg,
-							editDistanceThreshold, features, trainEQFGatherer,
-							testEQFGatherer, optProfile, optProfileThreshold,
+							boldFilterThreshold, features, trainGatherer,
+							testGatherer, optProfile, optProfileThreshold,
 							gamma, C, scoreboard)));
 
 			ModelConfigurationResult best = null;
@@ -544,15 +506,15 @@ public class TuneModel {
 
 		public AblationFeatureSelector(double wPos, double wNeg, double gamma,
 				double C, double editDistanceThreshold,
-				BinaryExampleGatherer trainEQFGatherer,
-				BinaryExampleGatherer testEQFGatherer,
+				BinaryExampleGatherer trainGatherer,
+				BinaryExampleGatherer testGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wNeg = wNeg;
 			this.wPos = wPos;
 			this.optProfileThreshold = optProfileThreshold;
-			this.trainGatherer = trainEQFGatherer;
-			this.testGatherer = testEQFGatherer;
+			this.trainGatherer = trainGatherer;
+			this.testGatherer = testGatherer;
 			this.optProfile = optProfile;
 			this.editDistanceThreshold = editDistanceThreshold;
 			this.scoreboard = scoreboard;
@@ -629,23 +591,23 @@ public class TuneModel {
 	static class IncrementalFeatureSelector implements Runnable {
 		private double wPos, wNeg, gamma, C;
 		private double optProfileThreshold;
-		private BinaryExampleGatherer trainEQFGatherer;
-		private BinaryExampleGatherer testEQFGatherer;
+		private BinaryExampleGatherer trainGatherer;
+		private BinaryExampleGatherer testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public IncrementalFeatureSelector(double wPos, double wNeg,
 				double gamma, double C, double editDistanceThreshold,
-				BinaryExampleGatherer trainEQFGatherer,
-				BinaryExampleGatherer testEQFGatherer,
+				BinaryExampleGatherer trainGatherer,
+				BinaryExampleGatherer testGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wNeg = wNeg;
 			this.wPos = wPos;
 			this.optProfileThreshold = optProfileThreshold;
-			this.trainEQFGatherer = trainEQFGatherer;
-			this.testEQFGatherer = testEQFGatherer;
+			this.trainGatherer = trainGatherer;
+			this.testGatherer = testGatherer;
 			this.optProfile = optProfile;
 			this.editDistanceThreshold = editDistanceThreshold;
 			this.scoreboard = scoreboard;
@@ -656,7 +618,7 @@ public class TuneModel {
 		@Override
 		public void run() {
 
-			Vector<Integer> ftrToTry = SmaphUtils.getAllFtrVect(testEQFGatherer
+			Vector<Integer> ftrToTry = SmaphUtils.getAllFtrVect(testGatherer
 					.getFtrCount());
 
 			ModelConfigurationResult bestBase = null;
@@ -677,8 +639,8 @@ public class TuneModel {
 						Future<ModelConfigurationResult> future = execServ
 								.submit(new ParameterTester(wPos, wNeg,
 										editDistanceThreshold,
-										pickedFtrsIteration, trainEQFGatherer,
-										testEQFGatherer, optProfile,
+										pickedFtrsIteration, trainGatherer,
+										testGatherer, optProfile,
 										optProfileThreshold, gamma, C,
 										scoreboard));
 						futures.add(future);

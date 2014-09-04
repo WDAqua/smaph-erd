@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <smaph>
+	<setting name="freebase">
+		<param name="key" value="FREEBASE_KEY" />
+	</setting>
 	<setting name="cache">
 		<param name="bing-cache" value="" />
 	</setting>

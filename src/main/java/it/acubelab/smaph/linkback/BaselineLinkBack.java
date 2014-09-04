@@ -11,12 +11,6 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 
 public class BaselineLinkBack implements LinkBack {
-	WikipediaApiInterface wikiApi;
-	
-	public BaselineLinkBack(WikipediaApiInterface api){
-		this.wikiApi = api;
-	}
-	
 	private class CompareTripleByScore implements
 			Comparator<Triple<Double, String[], Tag>> {
 		@Override
@@ -34,12 +28,16 @@ public class BaselineLinkBack implements LinkBack {
 
 	@Override
 	public HashSet<ScoredAnnotation> linkBack(String query,
-			HashMap<String[], Tag> boldsToEntities) {
+			HashSet<Tag> acceptedEntities, HashMap<String, Tag> boldToEntity,
+			HashMap<Tag, List<HashMap<String, Double>>> entityToFtrVects) {
+		HashMap<Tag, String[]> entitiesToBolds = SmaphUtils.getEntitiesToTexts(
+				boldToEntity, acceptedEntities);
 
 		// If more than one bold points to the same entity, keep the bold with
 		// smallest edit distance.
 		HashMap<String, Tag> boldToEntities = new HashMap<>();
-		for (String[] bolds : boldsToEntities.keySet()) {
+		for (Tag t : entitiesToBolds.keySet()) {
+			String[] bolds = entitiesToBolds.get(t);
 			String bestBold = null;
 			double bestDistance = Double.MAX_VALUE;
 			for (String bold : bolds) {
@@ -49,16 +47,7 @@ public class BaselineLinkBack implements LinkBack {
 					bestDistance = minED;
 				}
 			}
-			String title = "";
-			try {
-				title = wikiApi.getTitlebyId(boldsToEntities.get(bolds).getConcept());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			if (bestDistance > SmaphUtils.getMinEditDist(query, title)){
-				bestDistance = SmaphUtils.getMinEditDist(query, title);
-			}
-			boldToEntities.put(bestBold, boldsToEntities.get(bolds));
+			boldToEntities.put(bestBold, t);
 		}
 
 		// Compute, for each <bold, entity> pair, the list of covered query

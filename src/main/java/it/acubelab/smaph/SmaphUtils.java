@@ -16,6 +16,9 @@
 
 package it.acubelab.smaph;
 
+import it.acubelab.batframework.data.Annotation;
+import it.acubelab.batframework.data.Mention;
+import it.acubelab.batframework.data.Tag;
 import it.acubelab.batframework.utils.Pair;
 
 import java.io.BufferedReader;
@@ -104,6 +107,12 @@ public class SmaphUtils {
 			return 1;
 		int lev = StringUtils.getLevenshteinDistance(tokenB, tokenQ);
 		return (float) lev / (float) Math.max(tokenB.length(), tokenQ.length());
+	}
+
+	public static float getNormEditDistanceLC(String tokenB, String tokenQ) {
+		tokenB = tokenB.replaceAll("\\W+", " ").toLowerCase();
+		tokenQ = tokenQ.replaceAll("\\W+", " ").toLowerCase();
+		return getNormEditDistance(tokenB, tokenQ);
 	}
 
 	/**
@@ -256,4 +265,93 @@ public class SmaphUtils {
 		tokens.remove("");
 		return tokens;
 	}
+
+	public static List<Pair<Integer, Integer>> findTokensPosition(String text) {
+		text = text.replaceAll("\\W", " ").replaceAll("\\s", " ");
+		List<Pair<Integer, Integer>> positions = new Vector<>();
+		int idx = 0;
+		while (idx < text.length()) {
+			while (idx < text.length() && text.charAt(idx) == ' ')
+				idx++;
+			if (idx == text.length())
+				break;
+			int start = idx;
+			while (idx < text.length() && text.charAt(idx) != ' ')
+				idx++;
+			int end = idx;
+			positions.add(new Pair<>(start, end));
+		}
+		return positions;
+	}
+
+	private static void addBIOToken(int n, char token, String sequence,
+			List<String> sequences, int limit) {
+		if (sequences.size() > limit)
+			return;
+		sequence += token;
+		if (n > 0) {
+			addBIOToken(n - 1, 'B', sequence, sequences, limit);
+			if (token != 'O')
+				addBIOToken(n - 1, 'I', sequence, sequences, limit);
+			addBIOToken(n - 1, 'O', sequence, sequences, limit);
+		} else
+			sequences.add(sequence);
+	}
+
+	public static List<String> getBioSequences(int n, int limit) {
+		List<String> sequences = new Vector<>();
+		addBIOToken(n - 1, 'B', "", sequences, limit);
+		addBIOToken(n - 1, 'O', "", sequences, limit);
+		return sequences;
+	}
+
+	public static List<List<Pair<Integer, Integer>>> getSegmentations(
+			String query, int maxBioSequence) {
+		List<Pair<Integer, Integer>> qTokens = findTokensPosition(query);
+		List<List<Pair<Integer, Integer>>> segmentations = new Vector<>();
+		List<String> bioSequences = getBioSequences(qTokens.size(),
+				maxBioSequence);
+		for (String bioSequence : bioSequences) {
+			int start = -1;
+			int end = -1;
+			List<Pair<Integer, Integer>> segmentation = new Vector<>();
+			for (int i = 0; i < qTokens.size(); i++) {
+				Pair<Integer, Integer> token = qTokens.get(i);
+				if (start >= 0
+						&& (bioSequence.charAt(i) == 'B' || bioSequence
+								.charAt(i) == 'O')) {
+					segmentation.add(new Pair<Integer, Integer>(start, end));
+					start = -1;
+				}
+				if (bioSequence.charAt(i) == 'B'
+						|| bioSequence.charAt(i) == 'I') {
+					if (start == -1)
+						start = token.first;
+					end = token.second;
+				}
+			}
+			if (start != -1)
+				segmentation.add(new Pair<Integer, Integer>(start, end));
+			segmentations.add(segmentation);
+		}
+		return segmentations;
+	}
+
+	public static HashMap<Tag, String[]> getEntitiesToTexts(
+			HashMap<String, Tag> boldToEntity, HashSet<Tag> entityToKeep) {
+		HashMap<Tag, String[]> entityToTexts = new HashMap<>();
+		for (String bold : boldToEntity.keySet()) {
+			Tag tag = boldToEntity.get(bold);
+			if (entityToKeep != null && !entityToKeep.contains(tag))
+				continue;
+			List<String> boldsForEntity = new Vector<>();
+			if (entityToTexts.containsKey(tag))
+				boldsForEntity.addAll(Arrays.asList(entityToTexts.get(tag)));
+			boldsForEntity.add(bold);
+			entityToTexts.put(tag, boldsForEntity.toArray(new String[] {}));
+
+		}
+		return entityToTexts;
+	}
+	
 }

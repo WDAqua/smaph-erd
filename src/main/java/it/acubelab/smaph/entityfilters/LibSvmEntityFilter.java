@@ -17,10 +17,11 @@
 package it.acubelab.smaph.entityfilters;
 
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
-import it.acubelab.smaph.learn.LibSvmFilter;
+import it.acubelab.smaph.learn.LibSvmModel;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 
 import org.apache.commons.lang.ArrayUtils;
@@ -28,7 +29,7 @@ import org.apache.commons.lang.ArrayUtils;
 /**
  * An SVM-based entity filter.
  */
-public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
+public class LibSvmEntityFilter extends LibSvmModel implements EntityFilter {
 
 	public static String[] ftrNames = new String[] {
 			"is_s1", // 1
@@ -45,17 +46,29 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 			"s1_avgRank",
 			"s1_ambiguity",
 			"s1_pageRank", //
-			"s2_editDistance", "s2_rank",
-			"s2_webTotalWiki",
+			"s2_editDistanceTitle",
+			"s2_rank",
+			"s2_wikiWebTotal",
 			"s2_webTotal",
 			"s3_rank",
 			"s3_wikiWebTotal", // 20
-			"s3_editDistanceTitle", "s3_editDistanceNoPar",
-			"s3_editDistanceBolds", "s3_capitalizedBolds", "s3_avgBoldsWords",
-			"s5_rank", "s5_wikiWebTotal", "s5_editDistanceTitle",
-			"s5_editDistanceNoPar", "s5_editDistanceBolds", // 30
-			"s5_capitalizedBolds", "s5_avgBoldsWords",
-
+			"s3_editDistanceTitle",
+			"s3_editDistanceNoPar",
+			"s3_editDistanceBolds",
+			"s3_capitalizedBolds",
+			"s3_avgBoldsWords",
+			"s5_rank",
+			"s5_wikiWebTotal",
+			"s5_editDistanceTitle",
+			"s5_editDistanceNoPar",
+			"s5_editDistanceBolds", // 30
+			"s5_capitalizedBolds",
+			"s5_avgBoldsWords",
+			"s3_webTotal",
+			"s2_editDistanceNoPar",
+			"s2_editDistanceBolds",
+			"s2_capitalizedBolds",
+			"s2_avgBoldsWords", // 37
 	};
 
 	public LibSvmEntityFilter(String modelFileBase) throws IOException {
@@ -73,39 +86,7 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 		return result;
 	}
 
-	private static double getOrDefault(HashMap<String, Double> features,
-			String key, double defaultVal) {
-		Double res = features.get(key);
-		if (res == null)
-			return defaultVal;
-		return res;
-	}
-
-	/**
-	 * Turns a frature_name-feature_value mapping to an array of features.
-	 * 
-	 * @param features
-	 *            the mapping from feature names to feature values.
-	 * @return an array of feature values.
-	 */
-	public static double[] featuresToFtrVectStatic(
-			HashMap<String, Double> features) {
-
-		if (!checkFeatures(features)) {
-			for (String ftrName : features.keySet())
-				System.err.printf("%s -> %f%n", ftrName, features.get(ftrName));
-			throw new RuntimeException(
-					"Implementation error -- check the features");
-		}
-
-		Vector<Double> ftrValues = new Vector<>();
-		for (String ftrName : ftrNames)
-			ftrValues.add(getOrDefault(features, ftrName, 0.0));
-		
-		return ArrayUtils.toPrimitive(ftrValues.toArray(new Double[] {}));
-	}
-
-	private static boolean checkFeatures(HashMap<String, Double> features) {
+	public static boolean checkFeatures(HashMap<String, Double> features) {
 		if (getOrDefault(features, "is_s1", 0.0)
 				+ getOrDefault(features, "is_s2", 0.0)
 				+ getOrDefault(features, "is_s3", 0.0)
@@ -124,16 +105,16 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 				found = sourceFtrCount == 9
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s2_"))
-				found = sourceFtrCount == 4
+				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s3_"))
-				found = sourceFtrCount == 7
+				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s4_"))
 				found = sourceFtrCount == 0
 						&& features.size() == sourceFtrCount + 1;
 			if (sourcePrefix.equals("s5_"))
-				found = sourceFtrCount == 7
+				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + 1;
 
 			if (found)
@@ -142,8 +123,36 @@ public class LibSvmEntityFilter extends LibSvmFilter implements EntityFilter {
 		return false;
 	}
 
+	public static String[] getFeatureNames() {
+		return ftrNames;
+	}
+
+	/**
+	 * Turns a frature_name-feature_value mapping to an array of features.
+	 * 
+	 * @param features
+	 *            the mapping from feature names to feature values.
+	 * @return an array of feature values.
+	 */
+	public static double[] featuresToFtrVectStatic(HashMap<String, Double> features) {
+
+		if (!checkFeatures(features)) {
+			for (String ftrName : features.keySet())
+				System.err.printf("%s -> %f%n", ftrName, features.get(ftrName));
+			throw new RuntimeException(
+					"Implementation error -- check the features");
+		}
+
+		Vector<Double> ftrValues = new Vector<>();
+		for (String ftrName : getFeatureNames())
+			ftrValues.add(getOrDefault(features, ftrName, 0.0));
+
+		return ArrayUtils.toPrimitive(ftrValues.toArray(new Double[] {}));
+	}
+
 	@Override
 	public double[] featuresToFtrVect(HashMap<String, Double> features) {
 		return featuresToFtrVectStatic(features);
 	}
+
 }

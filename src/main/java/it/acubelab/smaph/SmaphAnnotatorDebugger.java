@@ -1,6 +1,7 @@
 package it.acubelab.smaph;
 
 import it.acubelab.batframework.data.Annotation;
+import it.acubelab.batframework.data.Tag;
 import it.acubelab.batframework.utils.Pair;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
@@ -184,13 +185,13 @@ public class SmaphAnnotatorDebugger {
 	}
 
 	public void addReturnedAnnotation(String query,
-			HashMap<String, Annotation> spotToAnnotation) {
+			HashMap<String, Tag> boldToAnnotation) {
 		if (!this.returnedAnnotations.containsKey(query))
 			this.returnedAnnotations.put(query,
 					new Vector<Pair<String, Integer>>());
-		for (String bold : spotToAnnotation.keySet())
+		for (String bold : boldToAnnotation.keySet())
 			this.returnedAnnotations.get(query).add(
-					new Pair<>(bold, spotToAnnotation.get(bold).getConcept()));
+					new Pair<>(bold, boldToAnnotation.get(bold).getConcept()));
 	}
 
 	public JSONArray getReturnedAnnotations(String query,

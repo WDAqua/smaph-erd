@@ -28,6 +28,8 @@ import javax.xml.xpath.XPathFactory;
 import org.w3c.dom.Document;
 
 public class SmaphConfig {
+	private static String defaultFreebaseKey;
+	private static String defaultFreebaseCache;
 	private static String defaultBingKey;
 	private static String defaultTagmeKey;
 	private static String defaultTagmeHost;
@@ -97,6 +99,8 @@ public class SmaphConfig {
 		try {
 			builder = factory.newDocumentBuilder();
 			doc = builder.parse(new FileInputStream(configFile));
+			defaultFreebaseKey = getConfigValue("freebase", "key", doc);
+			defaultFreebaseCache = getConfigValue("freebase", "cache", doc);
 			defaultBingKey = getConfigValue("bing", "key", doc);
 			defaultTagmeKey = getConfigValue("tagme", "key", doc);
 			defaultTagmeHost = getConfigValue("tagme", "host", doc);
@@ -120,6 +124,24 @@ public class SmaphConfig {
 		if (defaultBingCache == null)
 			initialize();
 		return defaultBingCache.isEmpty() ? null : defaultBingCache;
+	}
+
+	public static String getDefaultFreebaseKey() {
+		if (defaultFreebaseKey == null)
+			initialize();
+		if (defaultFreebaseKey.isEmpty() || defaultFreebaseKey.equals("FREEBASE_KEY"))
+			throw new RuntimeException(
+					"Configuration file "
+							+ configFile
+							+ " has dummy value 'FREEBASE_KEY' or is unset. Please replace with an actual Freebase key.");
+
+		return defaultFreebaseKey;
+	}
+	
+	public static String getDefaultFreebaseCache() {
+		if (defaultFreebaseCache == null)
+			initialize();
+		return defaultFreebaseCache.isEmpty() ? null : defaultFreebaseCache;
 	}
 
 }
