@@ -171,7 +171,7 @@ public class Annotator {
 					+ "_" + "ANW";
 
 			runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
-					"COMMONNESS", "jaccard", "mw", 0.6f,
+					"COMMONNESS", "base", "jaccard", 0.6f,
 					"Frequency", 0.06, "SvmEntityFilter",
 					modelFileEF, "NoEmptyQueryFilter", "null",
 					"Annotator+NormalSearch+WikiSearch10"); // <---------------------------
