@@ -238,37 +238,37 @@ public class SmaphAnnotator implements Sa2WSystem {
 		try {
 
 			/** Search the query on bing */
-			List<Pair<String, Integer>> bingBoldsAndRank = null;
+			List<Pair<String, Integer>> bingBoldsAndRankNS = null;
 			List<String> urls = null;
 			List<String> relatedSearchRes = null;
 			Triple<Integer, Double, JSONObject> resCountAndWebTotalNS = null;
 			int resultsCount = -1;
-			double webTotal = Double.NaN;
+			double webTotalNS = Double.NaN;
 			List<String> filteredBolds = null;
 			HashMap<Integer, Integer> rankToIdNS = null;
 			HashMap<Integer, HashSet<String>> rankToBoldsNS = null;
 			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds = null;
 			if (includeSourceAnnotator || includeSourceWikiSearch
 					|| includeSourceRelatedSearch || includeSourceNormalSearch) {
-				bingBoldsAndRank = new Vector<>();
+				bingBoldsAndRankNS = new Vector<>();
 				urls = new Vector<>();
 				relatedSearchRes = new Vector<>();
 				snippetsToBolds = new Vector<>();
-				resCountAndWebTotalNS = takeBingData(query, bingBoldsAndRank,
+				resCountAndWebTotalNS = takeBingData(query, bingBoldsAndRankNS,
 						urls, relatedSearchRes, snippetsToBolds,
 						Integer.MAX_VALUE, false);
 				resultsCount = resCountAndWebTotalNS.getLeft();
-				webTotal = resCountAndWebTotalNS.getMiddle();
-				filteredBolds = boldFilter.filterBolds(query, bingBoldsAndRank,
-						resultsCount);
+				webTotalNS = resCountAndWebTotalNS.getMiddle();
+				filteredBolds = boldFilter.filterBolds(query,
+						bingBoldsAndRankNS, resultsCount);
 				rankToIdNS = urlsToRankID(urls);
 				rankToBoldsNS = new HashMap<>();
-				SmaphUtils.mapRankToBoldsLC(bingBoldsAndRank, rankToBoldsNS,
+				SmaphUtils.mapRankToBoldsLC(bingBoldsAndRankNS, rankToBoldsNS,
 						null);
 
 				if (debugger != null) {
 					debugger.addBoldPositionEditDistance(query,
-							bingBoldsAndRank);
+							bingBoldsAndRankNS);
 					debugger.addSnippets(query, snippetsToBolds);
 					debugger.addBoldFilterOutput(query, filteredBolds);
 					debugger.addSource2SearchResult(query, rankToIdNS, urls);
@@ -283,11 +283,11 @@ public class SmaphAnnotator implements Sa2WSystem {
 			HashMap<String, Pair<Integer, Integer>> annTitlesToIdAndRankWS = null;
 			Triple<Integer, Double, JSONObject> resCountAndWebTotalWS = null;
 			HashMap<Integer, HashSet<String>> rankToBoldsWS = null;
-			double webTotalWiki = Double.NaN;
+			double webTotalWS = Double.NaN;
 			if (includeSourceWikiSearch | includeSourceNormalSearch) {
 				resCountAndWebTotalWS = takeBingData(query, bingBoldsAndRankWS,
 						wikiSearchUrls, null, null, topKWikiSearch, true);
-				webTotalWiki = resCountAndWebTotalWS.getMiddle();
+				webTotalWS = resCountAndWebTotalWS.getMiddle();
 				HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
 				rankToBoldsWS = new HashMap<>();
 				SmaphUtils.mapRankToBoldsLC(bingBoldsAndRankWS, rankToBoldsWS,
@@ -351,7 +351,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 						Annotation ann = spotToAnnotation.get(bold);
 						HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotator(
 								query, resultsCount, ann, annInput,
-								bingBoldsAndRank, additionalInfo);
+								bingBoldsAndRankNS, additionalInfo);
 						boolean accept = entityFilter.filterEntity(ESFeatures);
 						if (accept)
 							boldsToAcceptedEntity.put(new String[] { bold },
@@ -374,8 +374,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 			if (includeSourceNormalSearch) {
 				for (int rank : rankToIdNS.keySet()) {
 					int wid = rankToIdNS.get(rank);
-					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesNormalSearch(
-							query, wid, rank, webTotal, webTotalWiki);
+					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesSearch(
+							query, wid, rank, webTotalNS, webTotalWS,
+							bingBoldsAndRankNS, 2);
 					HashSet<String> bolds = rankToBoldsNS.get(rank);
 					boolean accept = entityFilter.filterEntity(ESFeatures);
 					if (accept)
@@ -397,9 +398,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 				for (String annotatedTitleWS : annTitlesToIdAndRankWS.keySet()) {
 					int wid = annTitlesToIdAndRankWS.get(annotatedTitleWS).first;
 					int rank = annTitlesToIdAndRankWS.get(annotatedTitleWS).second;
-					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesWikiSearch(
-							query, wid, rank, webTotalWiki, bingBoldsAndRankWS,
-							3);
+					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesSearch(
+							query, wid, rank, webTotalNS, webTotalWS,
+							bingBoldsAndRankWS, 3);
 
 					HashSet<String> bolds = rankToBoldsWS.get(rank);
 					boolean accept = entityFilter.filterEntity(ESFeatures);
@@ -423,9 +424,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 				for (String annotatedTitleRS : annTitlesToIdAndRankRS.keySet()) {
 					int wid = annTitlesToIdAndRankRS.get(annotatedTitleRS).first;
 					int rank = annTitlesToIdAndRankRS.get(annotatedTitleRS).second;
-					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesWikiSearch(
-							relatedSearch, wid, rank, webTotalRelatedSearch,
-							bingBoldsAndRankRS, 5);
+					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesSearch(
+							relatedSearch, wid, rank, webTotalNS,
+							webTotalRelatedSearch, bingBoldsAndRankRS, 5);
 
 					HashSet<String> bolds = rankToBoldsRS.get(rank);
 					boolean accept = entityFilter.filterEntity(ESFeatures);
@@ -801,6 +802,20 @@ public class SmaphAnnotator implements Sa2WSystem {
 	}
 
 	/**
+	 * Add all records contained in the cache passed by argument to the static
+	 * cache, overwriting in case of conflicting keys.
+	 * 
+	 * @param newCache
+	 *            the cache whose records are added.
+	 */
+	public static void mergeCache(HashMap<String, byte[]> newCache) {
+		for (String key : newCache.keySet()) {
+			url2jsonCache.put(key, newCache.get(key));
+			flushCounter++;
+		}
+	}
+
+	/**
 	 * Clear the Bing response cache and call the garbage collector.
 	 */
 	public static void unSetCache() {
@@ -905,56 +920,26 @@ public class SmaphAnnotator implements Sa2WSystem {
 	 *            the Wikipedia page ID of the entity.
 	 * @param rank
 	 *            the position in which the entity appeared in the Bing results.
-	 * @param webTotalWiki
+	 * @param wikiWebTotal
 	 *            total web results found by Bing for the Wikisearch.
 	 * @param webTotal
 	 *            total web results found by Bing for the normal search.
-	 * @return a mapping between feature name and its value.
-	 */
-	private HashMap<String, Double> generateEntitySelectionFeaturesNormalSearch(
-			String query, int wid, int rank, double webTotalWiki,
-			double webTotal) {
-		HashMap<String, Double> result = new HashMap<>();
-		result.put("is_s2", 1.0);
-		try {
-			result.put("s2_editDistance",
-					SmaphUtils.getMinEditDist(query, wikiApi.getTitlebyId(wid)));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-		result.put("s2_rank", (double) rank);
-		result.put("s2_webTotalWiki", (double) webTotalWiki);
-		result.put("s2_webTotal", (double) webTotal);
-
-		return result;
-
-	}
-
-	/**
-	 * Generates the Entity Selection features for an entity drawn from Source 2
-	 * (Normal Search)
-	 * 
-	 * @param query
-	 *            the query that has been issued to Bing.
-	 * @param wid
-	 *            the Wikipedia page ID of the entity.
-	 * @param rank
-	 *            the position in which the entity appeared in the Bing results.
-	 * @param wikiWebTotal
-	 *            total web results found by Bing for the Wikisearch.
 	 * @param bingBoldsWS
+	 *            the list of bolds spotted by Bing for the Wikisearch plus their position.
 	 * @param source
 	 *            Source id (3 for WikiSearch)
 	 * @return a mapping between feature name and its value.
 	 */
-	private HashMap<String, Double> generateEntitySelectionFeaturesWikiSearch(
-			String query, int wid, int rank, double wikiWebTotal,
-			List<Pair<String, Integer>> bingBoldsWS, int source) {
+	private HashMap<String, Double> generateEntitySelectionFeaturesSearch(
+			String query, int wid, int rank, double webTotal,
+			double wikiWebTotal, List<Pair<String, Integer>> bingBoldsWS,
+			int source) {
 
 		String sourceName = "s" + source;
 		HashMap<String, Double> result = new HashMap<>();
 		result.put("is_" + sourceName, 1.0);
 		result.put(sourceName + "_rank", (double) rank);
+		result.put(sourceName + "_webTotal", (double) webTotal);
 		result.put(sourceName + "_wikiWebTotal", (double) wikiWebTotal);
 		String title;
 		try {
@@ -1018,29 +1003,29 @@ public class SmaphAnnotator implements Sa2WSystem {
 			throws Exception {
 
 		/** Search the query on bing */
-		List<Pair<String, Integer>> bingBoldsAndRank = null;
+		List<Pair<String, Integer>> bingBoldsAndRankNS = null;
 		List<String> urls = null;
 		List<String> relatedSearchRes = null;
 		Triple<Integer, Double, JSONObject> resCountAndWebTotal = null;
 		int resultsCount = -1;
-		double webTotal = Double.NaN;
+		double webTotalNS = Double.NaN;
 		List<String> filteredBolds = null;
 		HashMap<Integer, Integer> rankToIdNS = null;
 		if (includeSourceAnnotator || includeSourceWikiSearch
 				|| includeSourceRelatedSearch || includeSourceNormalSearch) {
-			bingBoldsAndRank = new Vector<>();
+			bingBoldsAndRankNS = new Vector<>();
 			urls = new Vector<>();
 			relatedSearchRes = new Vector<>();
-			resCountAndWebTotal = takeBingData(query, bingBoldsAndRank, urls,
+			resCountAndWebTotal = takeBingData(query, bingBoldsAndRankNS, urls,
 					relatedSearchRes, null, Integer.MAX_VALUE, false);
 			resultsCount = resCountAndWebTotal.getLeft();
-			webTotal = resCountAndWebTotal.getMiddle();
-			filteredBolds = boldFilter.filterBolds(query, bingBoldsAndRank,
+			webTotalNS = resCountAndWebTotal.getMiddle();
+			filteredBolds = boldFilter.filterBolds(query, bingBoldsAndRankNS,
 					resultsCount);
 			rankToIdNS = urlsToRankID(urls);
 
 			if (debugger != null) {
-				debugger.addBoldPositionEditDistance(query, bingBoldsAndRank);
+				debugger.addBoldPositionEditDistance(query, bingBoldsAndRankNS);
 				debugger.addBoldFilterOutput(query, filteredBolds);
 				debugger.addSource2SearchResult(query, rankToIdNS, urls);
 				debugger.addBingResponseNormalSearch(query,
@@ -1054,11 +1039,11 @@ public class SmaphAnnotator implements Sa2WSystem {
 		List<Pair<String, Integer>> bingBoldsAndRankWS = new Vector<>();
 		HashMap<String, Pair<Integer, Integer>> annTitlesToIdAndRankWS = null;
 		Triple<Integer, Double, JSONObject> resCountAndWebTotalWS = null;
-		double webTotalWiki = Double.NaN;
+		double webTotalWS = Double.NaN;
 		if (includeSourceWikiSearch | includeSourceNormalSearch) {
 			resCountAndWebTotalWS = takeBingData(query, bingBoldsAndRankWS,
 					wikiSearchUrls, null, null, topKWikiSearch, true);
-			webTotalWiki = resCountAndWebTotalWS.getMiddle();
+			webTotalWS = resCountAndWebTotalWS.getMiddle();
 			HashMap<Integer, Integer> rankToIdWikiSearch = urlsToRankID(wikiSearchUrls);
 			if (debugger != null) {
 				debugger.addSource3SearchResult(query, rankToIdWikiSearch,
@@ -1113,7 +1098,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 					Annotation ann = spotToAnnotation.get(bold);
 					HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesAnnotator(
 							query, resultsCount, ann, annInput,
-							bingBoldsAndRank, additionalInfo);
+							bingBoldsAndRankNS, additionalInfo);
 					Tag tag = new Tag(ann.getConcept());
 					widToEFFtrVect.add(new Pair<Tag, HashMap<String, Double>>(
 							tag, ESFeatures));
@@ -1125,8 +1110,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 		if (includeSourceNormalSearch) {
 			for (int rank : rankToIdNS.keySet()) {
 				int wid = rankToIdNS.get(rank);
-				HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesNormalSearch(
-						query, wid, rank, webTotal, webTotalWiki);
+				HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesSearch(
+						query, wid, rank, webTotalNS, webTotalWS,
+						bingBoldsAndRankNS, 2);
 				Tag tag = new Tag(wid);
 				widToEFFtrVect.add(new Pair<Tag, HashMap<String, Double>>(tag,
 						ESFeatures));
@@ -1138,8 +1124,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 			for (String annotatedTitleWS : annTitlesToIdAndRankWS.keySet()) {
 				int wid = annTitlesToIdAndRankWS.get(annotatedTitleWS).first;
 				int rank = annTitlesToIdAndRankWS.get(annotatedTitleWS).second;
-				HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesWikiSearch(
-						query, wid, rank, webTotalWiki, bingBoldsAndRankWS, 3);
+				HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesSearch(
+						query, wid, rank, webTotalNS, webTotalWS,
+						bingBoldsAndRankWS, 3);
 
 				Tag tag = new Tag(wid);
 				widToEFFtrVect.add(new Pair<Tag, HashMap<String, Double>>(tag,
@@ -1152,9 +1139,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 			for (String annotatedTitleRS : annTitlesToIdAndRankRS.keySet()) {
 				int wid = annTitlesToIdAndRankRS.get(annotatedTitleRS).first;
 				int rank = annTitlesToIdAndRankRS.get(annotatedTitleRS).second;
-				HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesWikiSearch(
-						relatedSearch, wid, rank, webTotalRelatedSearch,
-						bingBoldsAndRankRS, 5);
+				HashMap<String, Double> ESFeatures = generateEntitySelectionFeaturesSearch(
+						relatedSearch, wid, rank, webTotalNS,
+						webTotalRelatedSearch, bingBoldsAndRankRS, 5);
 
 				Tag tag = new Tag(wid);
 				widToEFFtrVect.add(new Pair<Tag, HashMap<String, Double>>(tag,

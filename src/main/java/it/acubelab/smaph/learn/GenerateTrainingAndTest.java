@@ -26,6 +26,7 @@ import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
+import it.acubelab.smaph.boldfilters.FrequencyBoldFilter;
 import it.acubelab.smaph.entityfilters.NoEntityFilter;
 import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.acubelab.smaph.main.ERDDatasetFilter;
@@ -124,40 +125,14 @@ public class GenerateTrainingAndTest {
 			String bingKey) throws FileNotFoundException,
 			ClassNotFoundException, IOException {
 		WATAnnotator wikiSense = new WATAnnotator("wikisense.mkapp.it", 80,
-				"base", "PAGERANK", "jaccard", "0.6", "0.0"/* minlp */, false,
+				"base", "COMMONNESS", "jaccard", "0.6", "0.0"/* minlp */, false,
 				false, false);
 
 		SmaphAnnotator bingAnnotator = new SmaphAnnotator(wikiSense,
-				new EditDistanceBoldFilter(editDistanceSpotFilterThreshold),
+				new FrequencyBoldFilter((float)editDistanceSpotFilterThreshold),
 				new NoEntityFilter(), new DummyLinkBack(), true, true, true,
 				wikiSearchTopK, false, 0, false, 0, wikiApi, bingKey);
 
 		return bingAnnotator;
-	}
-
-	public static void main(String[] args) throws Exception {
-		Locale.setDefault(Locale.US);
-		// SmaphAnnotatorDebugger.disable();
-		String bingKey = "";
-		String freebKey = "";
-		WikipediaApiInterface wikiApi = new WikipediaApiInterface("wid.cache",
-				"redirect.cache");
-		FreebaseApi freebApi = new FreebaseApi(freebKey, "freeb.cache");
-
-		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");
-		SmaphAnnotator bingAnnotator = getDefaultBingAnnotator(wikiApi,
-				wikiToFreebase, 0.7, 10, bingKey);
-		SmaphAnnotator.setCache("bing.cache.full");
-
-		BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
-		BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
-		gatherExamplesTrainingAndDevel(bingAnnotator,
-				trainEntityFilterGatherer, develEntityFilterGatherer, wikiApi,
-				wikiToFreebase, freebApi);
-		trainEntityFilterGatherer.dumpExamplesLibSvm("train_entityfilter.dat");
-		develEntityFilterGatherer.dumpExamplesLibSvm("devel_entityfilter.dat");
-
-		SmaphAnnotator.flush();
-		wikiApi.flush();
 	}
 }

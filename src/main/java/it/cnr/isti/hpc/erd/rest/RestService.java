@@ -23,6 +23,7 @@ import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
+import it.acubelab.smaph.boldfilters.FrequencyBoldFilter;
 import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
 import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.cnr.isti.hpc.erd.Annotation;
@@ -76,38 +77,10 @@ public class RestService {
 	@Path("/debug")
 	@Produces({ MediaType.APPLICATION_JSON })
 	public String debugSmaph(@QueryParam("Text") String text) {
-		SmaphConfig.setConfigFile("smaph-config.xml");
-		String bingKey = SmaphConfig.getDefaultBingKey();
-		String bingCache = SmaphConfig.getDefaultBingCache();
-
-		WikipediaApiInterface wikiApi;
-		try {
-			wikiApi = new WikipediaApiInterface("wid.cache", "redirect.cache");
-			if (bingCache != null)
-				SmaphAnnotator.setCache(bingCache);
-		} catch (ClassNotFoundException | IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-
-		String modelBase = "models/model_1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25_3.80000_6.00000_0.700_0.03000000_5.00000000_ANW";
-		WATAnnotator auxAnnotatorService = new WATAnnotator(
-				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
-				"0", false, false, false);
-
-		SmaphAnnotator ann = null;
-		try {
-			ann = new SmaphAnnotator(auxAnnotatorService,
-					new EditDistanceBoldFilter(0.7), new LibSvmEntityFilter(
-							modelBase), new DummyLinkBack(), true, true, true,
-					10, false, -1, false, -1, wikiApi, bingKey);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
+		WikipediaApiInterface wikiApi = getDefaultWikiInterface();
+		SmaphAnnotator ann = getDefaultAnnotator(wikiApi);
 		SmaphAnnotatorDebugger debugger = new SmaphAnnotatorDebugger();
 		ann.setDebugger(debugger);
-
 		ann.solveSa2W(text);
 
 		try {
@@ -122,29 +95,40 @@ public class RestService {
 	@Path("/default")
 	@Produces({ MediaType.APPLICATION_JSON })
 	public String annotateGetFull(@QueryParam("Text") String text) {
-		SmaphConfig.setConfigFile("smaph-config.xml");
-		String bingKey = SmaphConfig.getDefaultBingKey();
-		String bingCache = SmaphConfig.getDefaultBingCache();
-		WikipediaApiInterface wikiApi;
-		try {
-			wikiApi = new WikipediaApiInterface("wid.cache", "redirect.cache");
-			if (bingCache != null)
-				SmaphAnnotator.setCache(bingCache);
+		WikipediaApiInterface wikiApi = getDefaultWikiInterface();
+		SmaphAnnotator ann = getDefaultAnnotator(wikiApi);
+		return encodeJsonResponse(ann.solveSa2W(text), wikiApi);
+	}
 
+	private WikipediaApiInterface getDefaultWikiInterface() {
+		try {
+			return new WikipediaApiInterface("wid.cache", "redirect.cache");
 		} catch (ClassNotFoundException | IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
+	}
 
-		String modelBase = "models/model_1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25_3.80000_6.00000_0.700_0.03000000_5.00000000_ANW";
+	private SmaphAnnotator getDefaultAnnotator(WikipediaApiInterface wikiApi) {
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		String bingKey = SmaphConfig.getDefaultBingKey();
+		String bingCache = SmaphConfig.getDefaultBingCache();
+		if (bingCache != null)
+			try {
+				SmaphAnnotator.setCache(bingCache);
+			} catch (ClassNotFoundException | IOException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
+
+		String modelBase = "models/model_1,2,3,6,7,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,33,34,35,36,37_3.80000_5.60000_0.060_0.03000000_5.00000000_ANW";
 		WATAnnotator auxAnnotatorService = new WATAnnotator(
-				"wikisense.mkapp.it", 80, "base", "PAGERANK", "jaccard", "0.6",
+				"wikisense.mkapp.it", 80, "base", "COMMONNESS", "jaccard", "0.6",
 				"0", false, false, false);
 
-		SmaphAnnotator ann = null;
 		try {
-			ann = new SmaphAnnotator(auxAnnotatorService,
-					new EditDistanceBoldFilter(0.7), new LibSvmEntityFilter(
+			return new SmaphAnnotator(auxAnnotatorService,
+					new FrequencyBoldFilter(0.06f), new LibSvmEntityFilter(
 							modelBase), new DummyLinkBack(), true, true, true,
 					10, false, -1, false, -1, wikiApi, bingKey);
 		} catch (IOException e) {
@@ -152,9 +136,6 @@ public class RestService {
 			throw new RuntimeException(e);
 		}
 
-		HashSet<ScoredAnnotation> annotations = ann.solveSa2W(text);
-
-		return encodeJsonResponse(annotations, wikiApi);
 	}
 
 	private String encodeJsonResponse(HashSet<ScoredAnnotation> annotations,
