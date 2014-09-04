@@ -166,27 +166,15 @@ public class Annotator {
 	public List<Annotation> annotate(String runId, String textID, String query) {
 		if (runId.startsWith("miao")) {
 			String modelFileEF = GenerateModel.getModelFileNameBaseEF(
-					new Integer[] { 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-							15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 }, 3.8,
-					6.0, 0.7, 0.03, 5.0)
+					new Integer[] {1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37},
+					3.8, 5.6, 0.06, 0.03, 5.0)
 					+ "_" + "ANW";
 
 			runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
-					"PAGERANK", "base", "jaccard", 0.6f,
-					"EditDistanceSpotFilter", 0.7, "SvmEntityFilter",
+					"COMMONNESS", "jaccard", "mw", 0.6f,
+					"Frequency", 0.06, "SvmEntityFilter",
 					modelFileEF, "NoEmptyQueryFilter", "null",
 					"Annotator+NormalSearch+WikiSearch10"); // <---------------------------
-
-			/*
-			 * String modelFileEF = OnlineTester.getModelFileNameBaseEF( new
-			 * Integer[]{ 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
-			 * 3, 4, 0.7,0.035,8.0)+"_"+"AN";
-			 * 
-			 * runId = String.format(ERDMain.SMAPH_PARAMS_FORMAT, "wikisense",
-			 * 0.0, "COMMONNESS", "base", "mw", 0.6f, "EditDistanceSpotFilter",
-			 * 0.7, "SvmEntityFilter", modelFileEF, "NoEmptyQueryFilter",
-			 * "null", "Annotator+NormalSearch");
-			 */
 		}
 		if (runId.equals("___reset_models")) {
 			System.out.println("Invalidating SVM models...");
@@ -236,27 +224,11 @@ public class Annotator {
 					{ 0.03, 5 },
 			};
 			double[][] weightsToTest = new double[][] {
-
-			/* { 3, 4 }, */
 					{ 3.8, 5.6 },
 			};
 			Integer[][] featuresSetsToTest = new Integer[][] {
-					//{ 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
-					  //{ 1, 2, 3, 6, 7,    9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 },
-
-					{ 1, 2, 3, 6, 7, 9, 10, 11,12,13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37 },
-					
-			/* { 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},}; */
+					{1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37},
 			};
-			/*
-			 * double[][] weightsToTest = new double[][] {
-			 * 
-			 * { 3.8, 6 }
-			 * 
-			 * }; Integer[][] featuresSetsToTest = new Integer[][] { { 1, 2, 3,
-			 * 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,19,
-			 * 20,21,22,23,24,25,26,27,28,29}, };
-			 */
 			if (runId.startsWith("ftr_test_")) {
 				String sources = runId.substring("ftr_test_".length(),
 						"ftr_test_XXX".length());
@@ -291,7 +263,7 @@ public class Annotator {
 						featuresSetsToTest[idftr], wPos, wNeg, edThr, gamma, C)
 						+ "_" + sources;
 				runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
-						"COMMONNESS", "base", "mw", 0.6f,
+						"COMMONNESS", "base", "jaccard", 0.6f,
 						"Frequency", edThr, "SvmEntityFilter",
 						modelFileEF, "NoEmptyQueryFilter", "null",
 						sourcesString);
