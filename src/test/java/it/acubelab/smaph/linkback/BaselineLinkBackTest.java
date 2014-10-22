@@ -3,6 +3,7 @@ package it.acubelab.smaph.linkback;
 import static org.junit.Assert.*;
 import it.acubelab.batframework.data.ScoredAnnotation;
 import it.acubelab.batframework.data.Tag;
+import it.acubelab.smaph.QueryInformation;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,8 +33,11 @@ public class BaselineLinkBackTest {
 			acceptedEntities.add(new Tag(222));
 			acceptedEntities.add(new Tag(333));
 
+			QueryInformation qi = new QueryInformation();
+			qi.boldToEntityS1 = boldsToEntities;
+			
 			HashSet<ScoredAnnotation> res = lb.linkBack(query,
-					acceptedEntities, boldsToEntities, null);
+					acceptedEntities, qi);
 			Vector<ScoredAnnotation> resVect = new Vector<>(res);
 			Collections.sort(resVect);
 			assertEquals(2, res.size());
@@ -60,8 +64,11 @@ public class BaselineLinkBackTest {
 			acceptedEntities.add(new Tag(111));
 			acceptedEntities.add(new Tag(222));
 
+			QueryInformation qi = new QueryInformation();
+			qi.boldToEntityS1 = boldsToEntities;
+
 			HashSet<ScoredAnnotation> res = lb.linkBack(query,
-					acceptedEntities, boldsToEntities, null);
+					acceptedEntities, qi);
 			Vector<ScoredAnnotation> resVect = new Vector<>(res);
 			Collections.sort(resVect);
 			assertEquals(2, res.size());

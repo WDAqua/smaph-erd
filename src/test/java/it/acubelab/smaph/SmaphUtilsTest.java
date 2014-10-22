@@ -226,4 +226,30 @@ public class SmaphUtilsTest {
 		assertEquals(true, verified.contains(12));
 	}
 
+	@Test
+	public void testFindSegments() throws Exception {
+		List<Pair<Integer, Integer>> segments = SmaphUtils.findSegments("  aaa bbb   ccc   ");
+		assertEquals(6, segments.size());
+		
+		assertEquals(2, segments.get(0).first.intValue());
+		assertEquals(5, segments.get(0).second.intValue());
+		assertEquals(6, segments.get(1).first.intValue());
+		assertEquals(9, segments.get(1).second.intValue());
+		assertEquals(12, segments.get(2).first.intValue());
+		assertEquals(15, segments.get(2).second.intValue());
+		assertEquals(2, segments.get(3).first.intValue());
+		assertEquals(9, segments.get(3).second.intValue());
+		assertEquals(6, segments.get(4).first.intValue());
+		assertEquals(15, segments.get(4).second.intValue());
+		assertEquals(2, segments.get(5).first.intValue());
+		assertEquals(15, segments.get(5).second.intValue());
+	}
+
+	@Test
+	public void testGetNonAlphanumericCharCount() throws Exception {
+		assertEquals(0, SmaphUtils.getNonAlphanumericCharCount(" dd    34"));
+		assertEquals(1, SmaphUtils.getNonAlphanumericCharCount(" dd;34"));
+		assertEquals(8, SmaphUtils.getNonAlphanumericCharCount(" dd;34.)*&*+^"));
+	}
+
 }
