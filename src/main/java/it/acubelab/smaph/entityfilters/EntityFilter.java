@@ -16,16 +16,17 @@
 
 package it.acubelab.smaph.entityfilters;
 
-import java.util.HashMap;
+import it.acubelab.smaph.learn.featurePacks.FeaturePack;
+import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
 
 /**
  * An interface to an Entity filter.
  */
 public interface EntityFilter {
 	/**
-	 * @param features
-	 *            features of the entity.
+	 * @param fp
+	 *            not-yet-normalized features of the entity.
 	 * @return true iff the entity should be kept.
 	 */
-	public boolean filterEntity(HashMap<String, Double> features);
+	public boolean filterEntity(FeaturePack fp, FeatureNormalizer fn);
 }

@@ -16,7 +16,8 @@
 
 package it.acubelab.smaph.entityfilters;
 
-import java.util.HashMap;
+import it.acubelab.smaph.learn.featurePacks.FeaturePack;
+import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
 
 /**
  * An entity filter that does nothing (accepts all entities).
@@ -24,7 +25,7 @@ import java.util.HashMap;
 public class NoEntityFilter implements EntityFilter {
 
 	@Override
-	public boolean filterEntity(HashMap<String, Double> features) {
+	public boolean filterEntity(FeaturePack fp, FeatureNormalizer fn) {
 		return true;
 	}
 
