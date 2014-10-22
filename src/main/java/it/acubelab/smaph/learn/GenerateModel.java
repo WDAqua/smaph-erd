@@ -21,15 +21,24 @@ import it.acubelab.batframework.systemPlugins.WATAnnotator;
 import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
-import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.SmaphUtils;
 import it.acubelab.smaph.learn.GenerateTrainingAndTest.OptDataset;
-import it.acubelab.smaph.linkback.SvmBindingRegressor;
-import it.acubelab.smaph.linkback.SvmLinkBack;
+import it.acubelab.smaph.learn.featurePacks.AnnotationFeaturePack;
+import it.acubelab.smaph.learn.featurePacks.BindingFeaturePack;
+import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
+import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
+import it.acubelab.smaph.learn.normalizer.NoFeatureNormalizer;
+import it.acubelab.smaph.learn.normalizer.ZScoreFeatureNormalizer;
+import it.acubelab.smaph.linkback.annotationRegressor.AnnotationRegressor;
+import it.acubelab.smaph.linkback.annotationRegressor.LibLinearAnnotationRegressor;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Vector;
 
 import libsvm.svm;
 import libsvm.svm_model;
@@ -37,17 +46,16 @@ import libsvm.svm_node;
 import libsvm.svm_parameter;
 import libsvm.svm_problem;
 
-import org.apache.commons.lang3.tuple.Triple;
-
 public class GenerateModel {
 	public static void main(String[] args) throws Exception {
 		Locale.setDefault(Locale.US);
-		generateEFModel();
+		generateEFModel(OptDataset.ERD_CHALLENGE);
+		//generateAnnotationModel();
 		//generateLBModel();
 		WATAnnotator.flush();
 	}
 
-	public static void generateLBModel() throws Exception {
+	public static void generateAnnotationModel() throws Exception {
 
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		String bingKey = SmaphConfig.getDefaultBingKey();
@@ -58,28 +66,93 @@ public class GenerateModel {
 				"redirect.cache");
 		FreebaseApi freebApi = new FreebaseApi(freebKey, freebCache);
 		Integer[][] featuresSetsToTest = new Integer[][] { SmaphUtils
-				.getAllFtrVect(SvmBindingRegressor.getFeatureNames().length)
+				.getAllFtrVect(new AnnotationFeaturePack().getFeatureCount())
 				.toArray(new Integer[] {}) };
 		OptDataset opt = OptDataset.SMAPH_DATASET;
 		
-		int wikiSearckTopK = 10;
 		String filePrefix = "_ANW";
 		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");
 		List<ModelConfigurationResult> mcrs = new Vector<>();
 		for (double boldFilterThr = 0.06; boldFilterThr <= 0.06; boldFilterThr += 0.02) {
 			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
-					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
-							boldFilterThr, wikiSearckTopK, bingKey);
+					.getDefaultBingAnnotatorGatherer(wikiApi, 
+							boldFilterThr, bingKey);
 			WATAnnotator.setCache("wikisense.cache");
 
-			ExampleGatherer trainLinkBackGatherer = new ExampleGatherer();
-			ExampleGatherer develLinkBackGatherer = new ExampleGatherer();
+			ExampleGatherer<AnnotationFeaturePack> trainAnnotationGatherer = new ExampleGatherer<AnnotationFeaturePack>();
+			ExampleGatherer<AnnotationFeaturePack> develAnnotationGatherer = new ExampleGatherer<AnnotationFeaturePack>();
+			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
+					bingAnnotator, null, null, null,
+					null, trainAnnotationGatherer, develAnnotationGatherer,null,null,  wikiApi, wikiToFreebase, freebApi, opt);
+			
+			ZScoreFeatureNormalizer fn = new ZScoreFeatureNormalizer(trainAnnotationGatherer);
+			fn.dump("/tmp/train_ann.dat.zscore", new AnnotationFeaturePack());
+			
+			System.out.println("Dumping Annotation training problems...");
+			trainAnnotationGatherer.dumpExamplesLibSvm("train_ann_scaled.dat", fn);
+			System.out.println("Dumping Annotation training problems for ranking...");
+			trainAnnotationGatherer.dumpExamplesRankLib("train_ann_scaled_ranking.dat", fn);
+			System.out.println("Dumping Annotation devel problems...");
+			develAnnotationGatherer.dumpExamplesLibSvm("devel_ann_scaled.dat", fn);
+			System.out.println("Dumping Annotation devel problems for ranking...");
+			develAnnotationGatherer.dumpExamplesRankLib("devel_ann_scaled_ranking.dat", fn);
+		}
+		for (ModelConfigurationResult mcr : mcrs)
+			System.out.printf("%.5f%%\t%.5f%%\t%.5f%%%n",
+					mcr.getMacroPrecision() * 100, mcr.getMacroRecall() * 100,
+					mcr.getMacroF1() * 100);
+		for (ModelConfigurationResult mcr : mcrs)
+			System.out.println(mcr.getReadable());
+
+	}
+
+
+	public static void generateLBModel() throws Exception {
+		String AFmodel = "/tmp/train_ann_scaled.dat.model";
+		String AFrange = "/tmp/train_ann.dat.zscore";
+		
+		AnnotationRegressor ar = new LibLinearAnnotationRegressor(AFmodel);
+		ZScoreFeatureNormalizer annFn = new ZScoreFeatureNormalizer(AFrange, new AnnotationFeaturePack());
+		
+		SmaphConfig.setConfigFile("smaph-config.xml");
+		String bingKey = SmaphConfig.getDefaultBingKey();
+		String freebKey = SmaphConfig.getDefaultFreebaseKey();
+		String freebCache = SmaphConfig.getDefaultFreebaseCache();
+		SmaphAnnotator.setCache(SmaphConfig.getDefaultBingCache());
+		WikipediaApiInterface wikiApi = new WikipediaApiInterface("wid.cache",
+				"redirect.cache");
+		FreebaseApi freebApi = new FreebaseApi(freebKey, freebCache);
+		Integer[][] featuresSetsToTest = new Integer[][] { SmaphUtils
+				.getAllFtrVect(new BindingFeaturePack().getFeatureCount())
+				.toArray(new Integer[] {}) };
+		OptDataset opt = OptDataset.SMAPH_DATASET;
+		
+		String filePrefix = "_ANW";
+		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");
+		List<ModelConfigurationResult> mcrs = new Vector<>();
+		for (double boldFilterThr = 0.06; boldFilterThr <= 0.06; boldFilterThr += 0.02) {
+			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
+					.getDefaultBingAnnotatorGatherer(wikiApi, 
+							boldFilterThr, bingKey);
+			WATAnnotator.setCache("wikisense.cache");
+
+			ExampleGatherer<BindingFeaturePack> trainLinkBackGatherer = new ExampleGatherer<BindingFeaturePack>();
+			ExampleGatherer<BindingFeaturePack> develLinkBackGatherer = new ExampleGatherer<BindingFeaturePack>();
 			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 					bingAnnotator, null, null, trainLinkBackGatherer,
-					develLinkBackGatherer, wikiApi, wikiToFreebase, freebApi, opt);
-			trainLinkBackGatherer.dumpExamplesLibSvm("train.dat");
-			develLinkBackGatherer.dumpExamplesLibSvm("devel.dat");
+					develLinkBackGatherer, null, null, ar, annFn, wikiApi, wikiToFreebase, freebApi, opt);
+			
+			FeatureNormalizer fn = new NoFeatureNormalizer();
+			System.out.println("Dumping binding training problems...");
+			trainLinkBackGatherer.dumpExamplesLibSvm("train_binding.dat", fn);
+			System.out.println("Dumping binding training problems for ranking...");
+			trainLinkBackGatherer.dumpExamplesRankLib("train_binding_ranking.dat", fn);
+			/*System.out.println("Dumping LB development problems...");
+			develLinkBackGatherer.dumpExamplesLibSvm("devel.dat", fn);*/
 
+			System.exit(0);
+			
+			System.out.println("Training models...");
 			int count = 0;
 			for (Integer[] ftrToTestArray : featuresSetsToTest) {
 				double gamma = 1.0 / ftrToTestArray.length;
@@ -90,41 +163,43 @@ public class GenerateModel {
 						features.toArray(new Integer[0]), boldFilterThr, gamma,
 						C) + filePrefix;
 
-				Triple<svm_problem, double[], double[]> ftrsMinsMaxs = TuneModel
-						.getScaledTrainProblem(features, trainLinkBackGatherer);
-				svm_problem trainProblem = ftrsMinsMaxs.getLeft();
+				svm_problem trainProblem = trainLinkBackGatherer.generateLibSvmProblem(features, fn);
 
-				LibSvmUtils.dumpRanges(ftrsMinsMaxs.getMiddle(),
-						ftrsMinsMaxs.getRight(), fileBase + ".range");
+				System.out.println("Dumping LB ranges...");
 				svm_parameter param = TuneModel.getParametersLB(gamma, C);
+				System.out.println("Training LB model...");
 				svm_model model = TuneModel.trainModel(param, features,
 						trainProblem);
 				svm.svm_save_model(fileBase + ".model", model);
-				List<svm_problem> testProblems = TuneModel
-						.getScaledTestProblems(features, develLinkBackGatherer,
-								ftrsMinsMaxs.getMiddle(),
-								ftrsMinsMaxs.getRight());
+				List<svm_problem> testProblems = develLinkBackGatherer.generateLibSvmProblemOnePerInstance(features, fn);
 				double highestPredictionGoldAvg = 0.0;
 				double highestGoldAvg = 0.0;
+				
+				//Vector<Double> preds = new Vector<>();
 				for (svm_problem testProblem : testProblems) {
 					double highestPrediction = Double.NEGATIVE_INFINITY;
 					double highestPredictionGold = Double.NEGATIVE_INFINITY;
 					double highestGold = Double.NEGATIVE_INFINITY;
+					int highestPredictionId = -1;
 					for (int j = 0; j < testProblem.l; j++) {
 						svm_node[] svmNode = testProblem.x[j];
 						double gold = testProblem.y[j];
 						double pred = svm.svm_predict(model, svmNode);
+						//System.out.printf("Binding %d - pred=%.3f gold=%.3f%n", j, pred, gold);
+
+						//preds.add(pred);
 						if (pred > highestPrediction) {
 							highestPrediction = pred;
 							highestPredictionGold = gold;
+							highestPredictionId = j;
 						}
 						if (gold > highestGold)
 							highestGold = gold;
 
-						System.out.printf(
-								"Problem %d - gold=%.3f pred = %.3f%n", j,
-								gold, pred);
 					}
+					System.out.printf(
+								"Best binding is %d - upper_bound_2=%.3f highest_pred=%.3f%n", highestPredictionId, highestGold, highestPredictionGold);
+
 					highestPredictionGoldAvg += highestPredictionGold;
 					highestGoldAvg += highestGold;
 				}
@@ -132,10 +207,20 @@ public class GenerateModel {
 				highestGoldAvg /= testProblems.size();
 				System.out.printf("Average F1: %.3f%n",
 						highestPredictionGoldAvg);
-				System.out.printf("Ideal F1: %.3f%n", highestGoldAvg);
+				System.out.printf("Avg. Upper bound 2: %.3f%n", highestGoldAvg);
 
 				System.err.printf("Trained %d/%d models.%n", ++count,
 						featuresSetsToTest.length);
+				
+				
+				/*for (double i = -50; i<60; i+=0.2){
+					int countI =0;
+					for (double s : preds)
+						if (i<s && s<=i+0.2)
+							countI ++;
+					System.out.printf("%.3f-%.3f : %d (%.2f%%)%n", i, i+0.2, countI, ((double)countI)*100.0/preds.size());
+							
+				}*/
 			}
 
 		}
@@ -148,8 +233,7 @@ public class GenerateModel {
 			System.out.println(mcr.getReadable());
 
 	}
-
-	public static void generateEFModel() throws Exception {
+	public static void generateEFModel(OptDataset opt) throws Exception {
 
 		SmaphConfig.setConfigFile("smaph-config.xml");
 		String bingKey = SmaphConfig.getDefaultBingKey();
@@ -163,67 +247,60 @@ public class GenerateModel {
 		double[][] weightsToTest = null;
 		Integer[][] featuresSetsToTest = null;
 
-		OptDataset opt = OptDataset.ERD_CHALLENGE;
-
 		if (opt == OptDataset.ERD_CHALLENGE) {
 			paramsToTest = new double[][] {
-			/*
-			 * {0.035, 0.5 }, {0.035, 1 }, {0.035, 4 }, {0.035, 8 }, {0.035, 10
-			 * }, {0.035, 16 }, {0.714, .5 }, {0.714, 1 }, {0.714, 4 }, {0.714,
-			 * 8 }, {0.714, 10 }, {0.714, 16 }, {0.9, .5 }, {0.9, 1 }, {0.9, 4
-			 * }, {0.9, 8 }, {0.9, 10 }, {0.9, 16 },
-			 * 
-			 * { 1.0/15.0, 1 }, { 1.0/27.0, 1 },
-			 */
-
-			
-			/*{0.010, 1}, {0.010, 5}, {0.010, 10},
-			{0.020, 1}, {0.020, 5}, {0.020, 10},
-			{0.030, 1}, {0.030, 5}, {0.030, 10},
-			{0.044, 1}, {0.044, 5}, {0.044, 10},
-			{0.060, 1}, {0.060, 5}, {0.060, 10},*/
-			 
-			{ 0.03, 5 }, };
+					{0.020, 30}, {0.020, 40}, {0.020, 50},
+					{0.030, 30}, {0.030, 40}, {0.030, 50},
+					{0.040, 30}, {0.040, 40}, {0.040, 50},
+				/*	{0.080, 15}*/
+			/*{ 0.03, 5 },*/ };
 			weightsToTest = new double[][] {
 
 			/*
-			 * { 3, 4 }
+					{ 3.8, 5.0 },
 			 */
-			{ 3.8, 4.0 },
+					{ 3.8, 4.5 },
+					{ 3.8, 5.0 },
+					{ 3.8, 5.5 },
 			};
 			featuresSetsToTest = new Integer[][] {
-			{ 1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-					22, 23, 24, 25, 33, 34, 35, 36, 37 }, };
+					{ 1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37 }, };
 		} else if (opt == OptDataset.SMAPH_DATASET) {
 			paramsToTest = new double[][] {
-					{ 0.03, 5 }
+					{ 0.10, 5 },
+
 			};
 			weightsToTest = new double[][] {
-					{2.88435, 2.00000}
+					{2.88435, 2.0},
 			};
 			featuresSetsToTest = new Integer[][] {
-					{7,8,9,10,11,12,13,15,17,20,21,23,24,25,33,34,35,37}
+					//{7,8,9,10,11,12,13,15,17,20,21,23,24,25,33,34,35,37},
+					{ 1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37, 38 }
 			};
 					
 		}
 			
-		int wikiSearckTopK = 10;
-		String filePrefix = "_ANW";
+		String filePrefix = "_ANW"+(opt == OptDataset.ERD_CHALLENGE?"-erd":"-smaph");
 		WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");
 		List<ModelConfigurationResult> mcrs = new Vector<>();
 		for (double boldFilterThr = 0.06; boldFilterThr <= 0.06; boldFilterThr += 0.02) {
 			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
-					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
-							boldFilterThr, wikiSearckTopK, bingKey);
+					.getDefaultBingAnnotatorGatherer(wikiApi,
+							boldFilterThr, bingKey);
 			WATAnnotator.setCache("wikisense.cache");
 
-			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
+			ExampleGatherer<EntityFeaturePack> trainEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
+			ExampleGatherer<EntityFeaturePack> develEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
 			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 					bingAnnotator, trainEntityFilterGatherer,
-					develEntityFilterGatherer, null, null, wikiApi,
+					develEntityFilterGatherer, null, null, null, null,null, null, wikiApi,
 					wikiToFreebase, freebApi, opt);
-
+			//ScaleFeatureNormalizer fNorm = new ScaleFeatureNormalizer(trainEntityFilterGatherer);
+			//trainEntityFilterGatherer.dumpExamplesLibSvm("train_ef_scaled.dat", fNorm);
+			ZScoreFeatureNormalizer fNorm = new ZScoreFeatureNormalizer(trainEntityFilterGatherer);
+			trainEntityFilterGatherer.dumpExamplesLibSvm("train_ef_zscore.dat", fNorm);
+			trainEntityFilterGatherer.dumpExamplesLibSvm("train_ef.dat", new NoFeatureNormalizer());
+			
 			int count = 0;
 			for (Integer[] ftrToTestArray : featuresSetsToTest) {
 				for (double[] paramsToTestArray : paramsToTest) {
@@ -233,30 +310,35 @@ public class GenerateModel {
 						double wPos = weightsPosNeg[0], wNeg = weightsPosNeg[1];
 						Vector<Integer> features = new Vector<>(
 								Arrays.asList(ftrToTestArray));
-						ExampleGatherer trainGatherer = trainEntityFilterGatherer;
-						ExampleGatherer develGatherer = develEntityFilterGatherer;
+						ExampleGatherer<EntityFeaturePack> trainGatherer = trainEntityFilterGatherer;
+						ExampleGatherer<EntityFeaturePack> develGatherer = develEntityFilterGatherer;
 						String fileBase = getModelFileNameBaseEF(
 								features.toArray(new Integer[0]), wPos, wNeg,
 								boldFilterThr, gamma, C) + filePrefix;
 
-						Triple<svm_problem, double[], double[]> ftrsMinsMaxs = TuneModel
-								.getScaledTrainProblem(features, trainGatherer);
-						svm_problem trainProblem = ftrsMinsMaxs.getLeft();
+						svm_problem trainProblem = trainGatherer.generateLibSvmProblem(features, fNorm);
 
-						LibSvmUtils.dumpRanges(ftrsMinsMaxs.getMiddle(),
-								ftrsMinsMaxs.getRight(), fileBase + ".range");
 						svm_parameter param = TuneModel.getParametersEF(wPos,
 								wNeg, gamma, C);
+						
+						System.out.println("Training binary classifier...");
 						svm_model model = TuneModel.trainModel(param, features,
 								trainProblem);
 						svm.svm_save_model(fileBase + ".model", model);
+						
+						/*svm_parameter paramRegr = TuneModel.getParametersEFRegressor(gamma, C);
+						System.out.println("Training regressor...");
+						svm_model modelRegr = TuneModel.trainModel(paramRegr, features,
+								trainProblem);
+						String fileBaseRegr = fileBase +".regressor";
+						svm.svm_save_model(fileBaseRegr + ".model", modelRegr);*/
+						//fNorm.dump(fileBase + ".range", new EntityFeaturePack());
+						fNorm.dump(fileBase + ".zscore", new EntityFeaturePack());
+						
+
 
 						MetricsResultSet metrics = TuneModel.ParameterTester
-								.computeMetrics(model, TuneModel
-										.getScaledTestProblems(features,
-												develGatherer,
-												ftrsMinsMaxs.getMiddle(),
-												ftrsMinsMaxs.getRight()));
+								.computeMetrics(model, develGatherer.generateLibSvmProblemOnePerInstance(features, fNorm));
 
 						int tp = metrics.getGlobalTp();
 						int fp = metrics.getGlobalFp();
@@ -280,9 +362,9 @@ public class GenerateModel {
 			}
 		}
 		for (ModelConfigurationResult mcr : mcrs)
-			System.out.printf("%.5f%%\t%.5f%%\t%.5f%%%n",
+			System.out.printf("P/R/F1 %.5f%%\t%.5f%%\t%.5f%% TP/FP/FN: %d/%d/%d%n",
 					mcr.getMacroPrecision() * 100, mcr.getMacroRecall() * 100,
-					mcr.getMacroF1() * 100);
+					mcr.getMacroF1() * 100, mcr.getTP(), mcr.getFP(), mcr.getFN());
 		for (double[] weightPosNeg : weightsToTest)
 			System.out.printf("%.5f\t%.5f%n", weightPosNeg[0], weightPosNeg[1]);
 		for (ModelConfigurationResult mcr : mcrs)
@@ -301,8 +383,13 @@ public class GenerateModel {
 	public static String getModelFileNameBaseEF(Integer[] ftrs, double wPos,
 			double wNeg, double editDistance, double gamma, double C) {
 		return String.format("models/model_%s_EF_%.5f_%.5f_%.3f_%.8f_%.8f",
-				getFtrListRepresentation(ftrs), wPos, wNeg, editDistance,
-				gamma, C);
+				getFtrListRepresentation(ftrs), wPos, wNeg, editDistance, gamma, C);
+	}
+	
+	private static String getModelFileNameBaseAF(Integer[] ftrs,
+			double boldFilterThr, double gamma, double c) {
+		return String.format("models/model_%s_AF_%.3f_%.8f_%.8f",
+				getFtrListRepresentation(ftrs), boldFilterThr, gamma, c);
 	}
 
 	private static String getFtrListRepresentation(Integer[] ftrs) {
