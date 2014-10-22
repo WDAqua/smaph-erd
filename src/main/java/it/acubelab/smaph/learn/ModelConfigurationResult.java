@@ -149,4 +149,16 @@ public class ModelConfigurationResult implements Serializable {
 		return this.macroRec;
 	}
 
+	public int getTP() {
+		return this.tp;
+	}
+
+	public int getFP() {
+		return this.fp;
+	}
+
+	public int getFN() {
+		return this.fn;
+	}
+
 }

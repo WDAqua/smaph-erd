@@ -16,20 +16,11 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.batframework.utils.Pair;
-
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Vector;
 
 import libsvm.svm_node;
-import libsvm.svm_problem;
 
 public class LibSvmUtils {
-	public static double scale(double value, double rangeMin, double rangeMax) {
-		return rangeMax == rangeMin? 0.0 : (value - rangeMin) / (rangeMax - rangeMin) * 2f - 1;
-	}
 	
 	public static svm_node[] featuresArrayToNode(double[] ftrArray) {
 		Vector<Integer> pickedFtrsI = new Vector<>();
@@ -48,7 +39,7 @@ public class LibSvmUtils {
 		}
 		return ftrVect;
 	}
-
+/*
 	public static Pair<double[], double[]> findRanges(svm_problem problem) {
 		int nftrs = problem.x[0].length;
 		double[] rangeMins = new double[nftrs];
@@ -86,4 +77,7 @@ public class LibSvmUtils {
 					rangeMaxs[ftrVect[i].index-1]);
 
 	}
+	*/
+	
+
 }

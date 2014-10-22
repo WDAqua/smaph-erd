@@ -16,21 +16,38 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.batframework.metrics.*;
-import it.acubelab.batframework.utils.*;
+import it.acubelab.batframework.metrics.Metrics;
+import it.acubelab.batframework.metrics.MetricsResultSet;
+import it.acubelab.batframework.utils.FreebaseApi;
 import it.acubelab.batframework.utils.Pair;
-import it.acubelab.smaph.*;
+import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.acubelab.smaph.IndexMatch;
+import it.acubelab.smaph.SmaphAnnotator;
+import it.acubelab.smaph.SmaphConfig;
+import it.acubelab.smaph.SmaphUtils;
 import it.acubelab.smaph.learn.GenerateTrainingAndTest.OptDataset;
-import it.acubelab.smaph.learn.TuneModel.OptimizaionProfiles;
+import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
+import it.acubelab.smaph.learn.normalizer.ScaleFeatureNormalizer;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Vector;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
-import libsvm.*;
-
-import org.apache.commons.lang3.tuple.*;
+import libsvm.svm;
+import libsvm.svm_model;
+import libsvm.svm_node;
+import libsvm.svm_parameter;
+import libsvm.svm_problem;
 
 public class TuneModel {
 	private static final int THREADS_NUM = 4;
@@ -80,6 +97,13 @@ public class TuneModel {
 		param.weight = new double[] { };
 		return param;	}
 
+	public static svm_parameter getParametersEFRegressor(double gamma, double c) {
+		
+		svm_parameter params = getParametersEF (-1, -1, gamma, c);
+		params.svm_type = svm_parameter.EPSILON_SVR;
+		return params;
+	}
+
 
 
 	public static void main(String[] args) throws Exception {
@@ -95,7 +119,6 @@ public class TuneModel {
 		FreebaseApi freebApi = new FreebaseApi(freebKey, freebCache);
 
 		Vector<ModelConfigurationResult> bestEFModels = new Vector<>();
-		int wikiSearchTopK = 10; // <======== mind this
 		double gamma = 0.03;
 		double C = 5.0;
 		OptDataset opt = OptDataset.SMAPH_DATASET;
@@ -104,16 +127,15 @@ public class TuneModel {
 					"mapdb");
 
 			SmaphAnnotator bingAnnotator = GenerateTrainingAndTest
-					.getDefaultBingAnnotator(wikiApi, wikiToFreebase,
-							boldFilterThr, wikiSearchTopK, bingKey);
+					.getDefaultBingAnnotatorGatherer(wikiApi, 
+							boldFilterThr, bingKey);
 
-			BinaryExampleGatherer trainEntityFilterGatherer = new BinaryExampleGatherer();
-			BinaryExampleGatherer develEntityFilterGatherer = new BinaryExampleGatherer();
-			ExampleGatherer trainLinkBackGatherer = new ExampleGatherer();
-			ExampleGatherer develLinkBackGatherer = new ExampleGatherer();
+			ExampleGatherer<EntityFeaturePack> trainEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
+			ExampleGatherer<EntityFeaturePack> develEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
+			
 			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 					bingAnnotator, trainEntityFilterGatherer,
-					develEntityFilterGatherer,trainLinkBackGatherer, develLinkBackGatherer ,wikiApi, wikiToFreebase,
+					develEntityFilterGatherer,null, null ,null, null, null, null, wikiApi, wikiToFreebase,
 					freebApi, opt);
 
 			Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> modelAndStatsEF = trainIterative(
@@ -148,39 +170,9 @@ public class TuneModel {
 		return svm.svm_train(trainProblem, param);
 	}
 
-	public static Triple<svm_problem, double[], double[]> getScaledTrainProblem(
-			Vector<Integer> pickedFtrsI, ExampleGatherer gatherer) {
-		Collections.sort(pickedFtrsI);
-
-		// find ranges for all features of training set
-		Pair<double[], double[]> minsAndMaxs = LibSvmUtils.findRanges(gatherer
-				.generateLibSvmProblem());
-
-		double[] mins = minsAndMaxs.first;
-		double[] maxs = minsAndMaxs.second;
-
-		// Generate training problem
-		svm_problem trainProblem = gatherer.generateLibSvmProblem(pickedFtrsI);
-		// Scale training problem
-		LibSvmUtils.scaleProblem(trainProblem, mins, maxs);
-
-		return new ImmutableTriple<svm_problem, double[], double[]>(
-				trainProblem, mins, maxs);
-	}
-
-	public static List<svm_problem> getScaledTestProblems(
-			Vector<Integer> pickedFtrsI, ExampleGatherer testGatherer,
-			double[] mins, double[] maxs) {
-		List<svm_problem> testProblems = testGatherer
-				.generateLibSvmProblemOnePerInstance(pickedFtrsI);
-		for (svm_problem testProblem : testProblems)
-			LibSvmUtils.scaleProblem(testProblem, mins, maxs);
-		return testProblems;
-	}
-
 	private static Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> trainIterative(
-			BinaryExampleGatherer trainGatherer,
-			BinaryExampleGatherer develGatherer, double boldFilterThreshold,
+			ExampleGatherer<EntityFeaturePack> trainGatherer,
+			ExampleGatherer<EntityFeaturePack> develGatherer, double boldFilterThreshold,
 			OptimizaionProfiles optProfile, double optProfileThreshold,
 			double gamma, double C) {
 
@@ -295,15 +287,15 @@ public class TuneModel {
 	public static class ParameterTester implements
 			Callable<ModelConfigurationResult> {
 		private double wPos, wNeg, editDistanceThreshold, gamma, C;
-		private BinaryExampleGatherer trainGatherer;
-		private BinaryExampleGatherer testGatherer;
+		private ExampleGatherer<EntityFeaturePack> trainGatherer;
+		private ExampleGatherer<EntityFeaturePack> testGatherer;
 		private Vector<Integer> features;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public ParameterTester(double wPos, double wNeg,
 				double editDistanceThreshold, Vector<Integer> features,
-				BinaryExampleGatherer trainEQFGatherer,
-				BinaryExampleGatherer testEQFGatherer,
+				ExampleGatherer<EntityFeaturePack> trainEQFGatherer,
+				ExampleGatherer<EntityFeaturePack> testEQFGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				double gamma, double C,
 				Vector<ModelConfigurationResult> scoreboard) {
@@ -350,11 +342,8 @@ public class TuneModel {
 		@Override
 		public ModelConfigurationResult call() throws Exception {
 
-			Triple<svm_problem, double[], double[]> ftrsMinsMaxs = getScaledTrainProblem(
-					this.features, trainGatherer);
-			double[] mins = ftrsMinsMaxs.getMiddle();
-			double[] maxs = ftrsMinsMaxs.getRight();
-			svm_problem trainProblem = ftrsMinsMaxs.getLeft();
+			ScaleFeatureNormalizer scaleFn = new ScaleFeatureNormalizer(trainGatherer);
+			svm_problem trainProblem = trainGatherer.generateLibSvmProblem(this.features, scaleFn);
 
 			svm_parameter param = getParametersEF(wPos, wNeg, gamma, C);
 
@@ -362,8 +351,7 @@ public class TuneModel {
 					trainProblem);
 
 			// Generate test problem and scale it.
-			List<svm_problem> testProblems = getScaledTestProblems(
-					this.features, testGatherer, mins, maxs);
+			List<svm_problem> testProblems = testGatherer.generateLibSvmProblemOnePerInstance(this.features, scaleFn);
 
 			MetricsResultSet metrics = computeMetrics(model, testProblems);
 
@@ -392,8 +380,8 @@ public class TuneModel {
 	static class WeightSelector implements Callable<Pair<Double, Double>> {
 		private double wPosMin, wPosMax, wNegMin, wNegMax, gamma, C;
 		private double optProfileThreshold;
-		private BinaryExampleGatherer trainGatherer;
-		private BinaryExampleGatherer testGatherer;
+		private ExampleGatherer<EntityFeaturePack> trainGatherer;
+		private ExampleGatherer<EntityFeaturePack> testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double boldFilterThreshold;
 		private double kappaPos, kappaNeg;
@@ -405,8 +393,8 @@ public class TuneModel {
 				double wNegMin, double wNegMax, double kappaNeg, double gamma,
 				double C, int steps, double boldFilterThreshold,
 				Vector<Integer> features,
-				BinaryExampleGatherer trainEQFGatherer,
-				BinaryExampleGatherer testEQFGatherer,
+				ExampleGatherer<EntityFeaturePack> trainEQFGatherer,
+				ExampleGatherer<EntityFeaturePack> testEQFGatherer,
 				OptimizaionProfiles optProfile,
 				Vector<ModelConfigurationResult> scoreboard) {
 			if (kappaNeg == -1)
@@ -498,16 +486,16 @@ public class TuneModel {
 	static class AblationFeatureSelector implements Runnable {
 		private double wPos, wNeg, gamma, C;
 		private double optProfileThreshold;
-		private BinaryExampleGatherer trainGatherer;
-		private BinaryExampleGatherer testGatherer;
+		private ExampleGatherer<EntityFeaturePack> trainGatherer;
+		private ExampleGatherer<EntityFeaturePack> testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public AblationFeatureSelector(double wPos, double wNeg, double gamma,
 				double C, double editDistanceThreshold,
-				BinaryExampleGatherer trainGatherer,
-				BinaryExampleGatherer testGatherer,
+				ExampleGatherer<EntityFeaturePack> trainGatherer,
+				ExampleGatherer<EntityFeaturePack> testGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wNeg = wNeg;
@@ -591,16 +579,16 @@ public class TuneModel {
 	static class IncrementalFeatureSelector implements Runnable {
 		private double wPos, wNeg, gamma, C;
 		private double optProfileThreshold;
-		private BinaryExampleGatherer trainGatherer;
-		private BinaryExampleGatherer testGatherer;
+		private ExampleGatherer<EntityFeaturePack> trainGatherer;
+		private ExampleGatherer<EntityFeaturePack> testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public IncrementalFeatureSelector(double wPos, double wNeg,
 				double gamma, double C, double editDistanceThreshold,
-				BinaryExampleGatherer trainGatherer,
-				BinaryExampleGatherer testGatherer,
+				ExampleGatherer<EntityFeaturePack> trainGatherer,
+				ExampleGatherer<EntityFeaturePack> testGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wNeg = wNeg;

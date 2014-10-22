@@ -16,12 +16,10 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.smaph.SmaphAnnotatorDebugger;
+import it.acubelab.smaph.learn.featurePacks.FeaturePack;
+import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
 
-import java.io.*;
-import java.util.*;
-
-import org.apache.commons.lang.ArrayUtils;
+import java.io.IOException;
 
 import libsvm.svm;
 import libsvm.svm_model;
@@ -29,65 +27,26 @@ import libsvm.svm_node;
 
 /**
  * A wrapper for a LibSvm model.
+ * 
  * @author Marco Cornolti
  *
  */
 public abstract class LibSvmModel {
 	private svm_model model;
-	private double[] rangeMins, rangeMaxs;
-	private String modelFile;
-	private String rangeFile;
+	String modelFile;
 
-	public LibSvmModel(String modelFile, String rangeFile) throws IOException {
+	public LibSvmModel(String modelFile) throws IOException {
 		setModel(modelFile);
-		this.rangeFile = rangeFile;
-		resetRanges();
 	}
 
-	public abstract double[] featuresToFtrVect(HashMap<String, Double> features);
-
-	public boolean predict(HashMap<String, Double> features) {
-		svm_node[] ftrVect = LibSvmUtils
-				.featuresArrayToNode(featuresToFtrVect(features));
-		LibSvmUtils.scaleNode(ftrVect, rangeMins, rangeMaxs);
-		return svm.svm_predict(model, ftrVect) > 0;
+	public boolean predict(FeaturePack fp, FeatureNormalizer fn) {
+		return predictScore(fp, fn) > 0.0;
 	}
 
-	public double predictScore(HashMap<String, Double> features) {
-		svm_node[] ftrVect = LibSvmUtils
-				.featuresArrayToNode(featuresToFtrVect(features));
-		LibSvmUtils.scaleNode(ftrVect, rangeMins, rangeMaxs);
+	public double predictScore(FeaturePack fp, FeatureNormalizer fn) {
+		svm_node[] ftrVect = LibSvmUtils.featuresArrayToNode(fn
+				.ftrToNormalizedFtrArray(fp));
 		return svm.svm_predict(model, ftrVect);
-	}
-
-	public void resetRanges() {
-		Vector<String[]> tokensVect = new Vector<>();
-		try {
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					new FileInputStream(rangeFile)));
-			String line;
-			while ((line = reader.readLine()) != null) {
-				String[] tokens = line.split(" ");
-				if (tokens.length == 3)
-					tokensVect.add(tokens);
-			}
-			reader.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		rangeMins = new double[tokensVect.size()];
-		rangeMaxs = new double[tokensVect.size()];
-		for (String[] tokens : tokensVect) {
-			int featureId = Integer.parseInt(tokens[0]);
-			float rangeMin = Float.parseFloat(tokens[1]);
-			float rangeMax = Float.parseFloat(tokens[2]);
-			rangeMins[featureId - 1] = rangeMin;
-			rangeMaxs[featureId - 1] = rangeMax;
-			SmaphAnnotatorDebugger.out.printf(
-					"Feature %d range: [%.3f, %.3f]%n", featureId, rangeMin,
-					rangeMax);
-		}
 	}
 
 	public String getModel() {
@@ -102,13 +61,5 @@ public abstract class LibSvmModel {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
-	}
-
-	public static double getOrDefault(HashMap<String, Double> features,
-			String key, double defaultVal) {
-		Double res = features.get(key);
-		if (res == null)
-			return defaultVal;
-		return res;
 	}
 }
