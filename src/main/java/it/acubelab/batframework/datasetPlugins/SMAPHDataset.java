@@ -165,7 +165,8 @@ public class SMAPHDataset implements A2WDataset {
 
 	@Override
 	public List<HashSet<Tag>> getC2WGoldStandardList() {
-		return tags;
+		//return tags;
+		return ProblemReduction.A2WToC2WList(annotations);
 	}
 
 	@Override
