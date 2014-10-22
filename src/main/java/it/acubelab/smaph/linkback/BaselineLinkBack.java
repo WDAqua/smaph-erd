@@ -1,10 +1,9 @@
 package it.acubelab.smaph.linkback;
 
 import it.acubelab.batframework.data.*;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphUtils;
+import it.acubelab.smaph.QueryInformation;
 
-import java.io.IOException;
 import java.util.*;
 
 import org.apache.commons.lang3.tuple.ImmutableTriple;
@@ -28,10 +27,9 @@ public class BaselineLinkBack implements LinkBack {
 
 	@Override
 	public HashSet<ScoredAnnotation> linkBack(String query,
-			HashSet<Tag> acceptedEntities, HashMap<String, Tag> boldToEntity,
-			HashMap<Tag, List<HashMap<String, Double>>> entityToFtrVects) {
-		HashMap<Tag, String[]> entitiesToBolds = SmaphUtils.getEntitiesToTexts(
-				boldToEntity, acceptedEntities);
+			HashSet<Tag> acceptedEntities, QueryInformation qi) {
+		HashMap<Tag, String[]> entitiesToBolds = SmaphUtils.getEntitiesToBolds(
+				qi.boldToEntityS1, acceptedEntities);
 
 		// If more than one bold points to the same entity, keep the bold with
 		// smallest edit distance.
