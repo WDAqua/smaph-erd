@@ -1,15 +1,13 @@
 package it.acubelab.smaph;
 
-import it.acubelab.batframework.data.Annotation;
 import it.acubelab.batframework.data.Tag;
 import it.acubelab.batframework.utils.Pair;
 import it.acubelab.batframework.utils.WikipediaApiInterface;
-import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
+import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URLEncoder;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,10 +28,10 @@ public class SmaphAnnotatorDebugger {
 	private HashMap<String, List<Triple<String, Integer, Double>>> boldPositionED = new HashMap<>();
 	private HashMap<String, List<String>> boldFilterOutput = new HashMap<>();
 	private HashMap<String, List<Pair<String, Integer>>> returnedAnnotations = new HashMap<>();
-	private HashMap<String, HashMap<Triple<Integer, HashMap<String, Double>, Boolean>, String>> ftrToBoldS1 = new HashMap<>();
-	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS1 = new HashMap<>();
-	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS2 = new HashMap<>();
-	private HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> entityFeaturesS3 = new HashMap<>();
+	private HashMap<String, HashMap<Triple<Integer, EntityFeaturePack, Boolean>, String>> ftrToBoldS1 = new HashMap<>();
+	private HashMap<String, List<Triple<Integer, EntityFeaturePack, Boolean>>> entityFeaturesS1 = new HashMap<>();
+	private HashMap<String, List<Triple<Integer, EntityFeaturePack, Boolean>>> entityFeaturesS2 = new HashMap<>();
+	private HashMap<String, List<Triple<Integer, EntityFeaturePack, Boolean>>> entityFeaturesS3 = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source2SearchResult = new HashMap<>();
 	private HashMap<String, List<Triple<Integer, String, Integer>>> source3SearchResult = new HashMap<>();
 	private HashMap<String, HashSet<Integer>> result = new HashMap<>();
@@ -209,48 +207,48 @@ public class SmaphAnnotatorDebugger {
 	}
 
 	public void addEntityFeaturesS1(String query, String bold, int wid,
-			HashMap<String, Double> features, boolean accepted) {
-		ImmutableTriple<Integer, HashMap<String, Double>, Boolean> ftrTriple = addEntityFeatures(
+			EntityFeaturePack features, boolean accepted) {
+		ImmutableTriple<Integer, EntityFeaturePack, Boolean> ftrTriple = addEntityFeatures(
 				this.entityFeaturesS1, query, wid, features, accepted);
 
 		if (!ftrToBoldS1.containsKey(query))
 			ftrToBoldS1
 					.put(query,
-							new HashMap<Triple<Integer, HashMap<String, Double>, Boolean>, String>());
+							new HashMap<Triple<Integer, EntityFeaturePack, Boolean>, String>());
 		ftrToBoldS1.get(query).put(ftrTriple, bold);
 	}
 
 	public void addEntityFeaturesS2(String query, int wid,
-			HashMap<String, Double> features, boolean accepted) {
+			EntityFeaturePack features, boolean accepted) {
 		addEntityFeatures(this.entityFeaturesS2, query, wid, features, accepted);
 	}
 
 	public void addEntityFeaturesS3(String query, int wid,
-			HashMap<String, Double> features, boolean accepted) {
+			EntityFeaturePack features, boolean accepted) {
 		addEntityFeatures(this.entityFeaturesS3, query, wid, features, accepted);
 	}
 
-	private ImmutableTriple<Integer, HashMap<String, Double>, Boolean> addEntityFeatures(
-			HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> source,
-			String query, int wid, HashMap<String, Double> features,
+	private ImmutableTriple<Integer, EntityFeaturePack, Boolean> addEntityFeatures(
+			HashMap<String, List<Triple<Integer, EntityFeaturePack, Boolean>>> source,
+			String query, int wid, EntityFeaturePack features,
 			boolean accepted) {
 		if (!source.containsKey(query))
 			source.put(
 					query,
-					new Vector<Triple<Integer, HashMap<String, Double>, Boolean>>());
-		ImmutableTriple<Integer, HashMap<String, Double>, Boolean> ftrTriple = new ImmutableTriple<>(
+					new Vector<Triple<Integer, EntityFeaturePack, Boolean>>());
+		ImmutableTriple<Integer, EntityFeaturePack, Boolean> ftrTriple = new ImmutableTriple<>(
 				wid, features, accepted);
 		source.get(query).add(ftrTriple);
 		return ftrTriple;
 	}
 
 	private JSONArray getEntityFeatures(
-			HashMap<String, List<Triple<Integer, HashMap<String, Double>, Boolean>>> source,
+			HashMap<String, List<Triple<Integer, EntityFeaturePack, Boolean>>> source,
 			String query, WikipediaApiInterface wikiApi) throws JSONException,
 			IOException {
 		JSONArray res = new JSONArray();
 		if (source.containsKey(query))
-			for (Triple<Integer, HashMap<String, Double>, Boolean> p : source
+			for (Triple<Integer, EntityFeaturePack, Boolean> p : source
 					.get(query)) {
 				JSONObject pairJs = new JSONObject();
 				res.put(pairJs);
@@ -262,8 +260,8 @@ public class SmaphAnnotatorDebugger {
 				pairJs.put("url", widToUrl(p.getLeft(), wikiApi));
 				JSONObject features = new JSONObject();
 				pairJs.put("features", features);
-				for (String ftrName : LibSvmEntityFilter.ftrNames)
-					features.put(ftrName, p.getMiddle().get(ftrName));
+				for (String ftrName : p.getMiddle().getFeatureNames())
+					features.put(ftrName, p.getMiddle().getFeature(ftrName));
 				pairJs.put("accepted", p.getRight());
 			}
 		return res;

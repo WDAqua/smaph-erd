@@ -17,9 +17,12 @@
 package it.acubelab.smaph;
 
 import it.acubelab.batframework.data.Annotation;
-import it.acubelab.batframework.data.Mention;
 import it.acubelab.batframework.data.Tag;
 import it.acubelab.batframework.utils.Pair;
+import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.acubelab.smaph.learn.featurePacks.AnnotationFeaturePack;
+import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
+import it.acubelab.smaph.linkback.annotationRegressor.AnnotationRegressor;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -27,9 +30,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -283,10 +288,19 @@ public class SmaphUtils {
 		}
 		return positions;
 	}
-
+	
+	public static List<Pair<Integer, Integer>> findSegments(String text) {
+		List<Pair<Integer, Integer>> tokens = findTokensPosition(text);
+		List<Pair<Integer, Integer>> segments = new Vector<>();
+		for (int n= 1; n<=tokens.size(); n++)
+			for (int i=0;i<=tokens.size()-n;i++)
+				segments.add(new Pair<Integer, Integer>(tokens.get(i).first, tokens.get(i+n-1).second));
+		return segments;
+	}
+		
 	private static void addBIOToken(int n, char token, String sequence,
 			List<String> sequences, int limit) {
-		if (sequences.size() > limit)
+		if (sequences.size() >= limit)
 			return;
 		sequence += token;
 		if (n > 0) {
@@ -337,8 +351,8 @@ public class SmaphUtils {
 		return segmentations;
 	}
 
-	public static HashMap<Tag, String[]> getEntitiesToTexts(
-			HashMap<String, Tag> boldToEntity, HashSet<Tag> entityToKeep) {
+	public static HashMap<Tag, String[]> getEntitiesToBolds(
+			HashMap<String, Tag> boldToEntity, Set<Tag> entityToKeep) {
 		HashMap<Tag, String[]> entityToTexts = new HashMap<>();
 		for (String bold : boldToEntity.keySet()) {
 			Tag tag = boldToEntity.get(bold);
@@ -353,5 +367,77 @@ public class SmaphUtils {
 		}
 		return entityToTexts;
 	}
+
+	public static HashMap<Tag, String> getEntitiesToTitles(
+			Set<Tag> acceptedEntities, WikipediaApiInterface wikiApi) {
+		HashMap<Tag, String> res = new HashMap<>();
+		for (Tag t : acceptedEntities)
+			try {
+				res.put(t, wikiApi.getTitlebyId(t.getConcept()));
+			} catch (IOException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
+		return res;
+	}
+
+	public static int getNonAlphanumericCharCount(String str) {
+		int count = 0;
+		for (char c : str.toCharArray())
+			if (!((c >= 'a' &&c <= 'z') || (c >= 'A' &&c <= 'Z') || (c >= '0' &&c <= '9') || c == ' '))
+				count ++;
+		return count;
+	}
 	
+
+	public static class ComparePairsByFirstElement implements Comparator<Pair<Double, ?>> {
+		@Override
+		public int compare(Pair<Double, ?> o1, Pair<Double, ?> o2) {
+			double diff = o1.first - o2.first;
+			if (diff < 0)
+				return -1;
+			else if (diff == 0)
+				return 0;
+			else
+				return 1;
+		}
+	}
+
+	public static class ComparePairsBySecondElement implements Comparator<Pair<?, Double>> {
+		@Override
+		public int compare(Pair<?, Double> o1, Pair<?, Double> o2) {
+			double diff = o1.second - o2.second;
+			if (diff < 0)
+				return -1;
+			else if (diff == 0)
+				return 0;
+			else
+				return 1;
+		}
+	}
+
+	public static HashMap<Annotation, Double> predictBestScores(AnnotationRegressor ar, FeatureNormalizer fn,
+			List<HashSet<Annotation>> allBindings, String query,
+			HashMap<Tag, List<HashMap<String, Double>>> entityToFtrVects,
+			HashMap<Tag, String[]> entitiesToBoldsS1,
+			HashMap<Tag, String> entitiesToTitles, EnglishStemmer englishStemmer) {
+		
+		List<Annotation> annotations = new Vector<>();
+		for (HashSet<Annotation> binding : allBindings)
+			for (Annotation a : binding)
+				annotations.add(a);
+
+		HashMap<Annotation, Double> annsToRegressorScore = new HashMap<>();
+			for (Annotation ann : annotations){
+				double bestScore = Double.NEGATIVE_INFINITY;
+				for (HashMap<String, Double> entityFtrs : entityToFtrVects.get(new Tag(ann.getConcept())))
+					bestScore = Math.max(bestScore, ar.predictScore(new AnnotationFeaturePack(ann, query, new EnglishStemmer(),
+							entityFtrs, entitiesToBoldsS1, entitiesToTitles), fn));
+				annsToRegressorScore.put(ann, bestScore);
+			}
+
+		return annsToRegressorScore;
+	}
+
+
 }
