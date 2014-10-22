@@ -22,9 +22,10 @@ import it.acubelab.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphConfig;
-import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
 import it.acubelab.smaph.boldfilters.FrequencyBoldFilter;
 import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
+import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
+import it.acubelab.smaph.learn.normalizer.ScaleFeatureNormalizer;
 import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.cnr.isti.hpc.erd.Annotation;
 import it.cnr.isti.hpc.erd.Annotator;
@@ -129,7 +130,7 @@ public class RestService {
 		try {
 			return new SmaphAnnotator(auxAnnotatorService,
 					new FrequencyBoldFilter(0.06f), new LibSvmEntityFilter(
-							modelBase), new DummyLinkBack(), true, true, true,
+							modelBase), new ScaleFeatureNormalizer(modelBase+".range", new EntityFeaturePack()), new DummyLinkBack(), true, true, true,
 					10, false, -1, false, -1, wikiApi, bingKey);
 		} catch (IOException e) {
 			e.printStackTrace();
