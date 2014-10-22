@@ -129,13 +129,12 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 
 	@Override
 	public HashSet<Annotation> solveA2W(String text) throws AnnotationException {
-		return null;
+		return ProblemReduction.Sa2WToA2W(solveSa2W(text));
 	}
 
 	@Override
 	public HashSet<Tag> solveC2W(String text) throws AnnotationException {
-		// TODO Auto-generated method stub
-		return null;
+		return ProblemReduction.A2WToC2W(solveA2W(text));
 	}
 
 	@Override
