@@ -34,7 +34,7 @@ public class EntityFeaturePack extends FeaturePack {
 			"s2_webTotal",
 			"s3_rank",
 			"s3_wikiWebTotal", // 20
-added			"s3_editDistanceTitle",
+			"s3_editDistanceTitle",
 			"s3_editDistanceNoPar",
 			"s3_editDistanceBolds",
 			"s3_capitalizedBolds",
