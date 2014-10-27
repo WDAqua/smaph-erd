@@ -252,4 +252,124 @@ public class SmaphUtilsTest {
 		assertEquals(8, SmaphUtils.getNonAlphanumericCharCount(" dd;34.)*&*+^"));
 	}
 
+	@Test
+	public void testBoldPairsToListLC() throws Exception {
+		List<Pair<String,Integer>> boldAndRanks = new Vector<>();
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 1));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 6));
+		boldAndRanks.add(new Pair<String, Integer>("bbb", 5));
+		boldAndRanks.add(new Pair<String, Integer>("CCC", 5));
+		boldAndRanks.add(new Pair<String, Integer>("ccc", 6));
+		List<String> bolds = SmaphUtils.boldPairsToListLC(boldAndRanks);
+		assertEquals(bolds.size(), 7);
+		assertEquals(bolds.get(0), "aaa");
+		assertEquals(bolds.get(1), "aaa");
+		assertEquals(bolds.get(2), "aaa");
+		assertEquals(bolds.get(3), "aaa");
+		assertEquals(bolds.get(4), "bbb");
+		assertEquals(bolds.get(5), "ccc");
+		assertEquals(bolds.get(6), "ccc");
+	}
+
+	@Test
+	public void testGetFragmentation() throws Exception {
+		List<Pair<String, Integer>> boldAndRanks = new Vector<>();
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("aaa bbb", 1));
+		boldAndRanks.add(new Pair<String, Integer>("aaa BBB", 1));
+		boldAndRanks.add(new Pair<String, Integer>("aaa bbb", 4));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 6));
+		boldAndRanks.add(new Pair<String, Integer>("bbb aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("CCC", 5));
+		boldAndRanks.add(new Pair<String, Integer>("ccc", 6));
+		boldAndRanks.add(new Pair<String, Integer>("bbb", 6));
+		List<String> bolds = SmaphUtils.boldPairsToListLC(boldAndRanks);
+		assertEquals(1.0, SmaphUtils.getFragmentation(bolds, "aaa"), DELTA);
+		assertEquals(3.0 / 7.0,
+				SmaphUtils.getFragmentation(bolds, "aaa ' bbb  "), DELTA);
+		assertEquals(1.0 / 5.0, SmaphUtils.getFragmentation(bolds, "BBB aaa"),
+				DELTA);
+		assertEquals(1.0, SmaphUtils.getFragmentation(bolds, "ccc"), DELTA);
+		assertEquals(1.0, SmaphUtils.getFragmentation(bolds, "bbb"), DELTA);
+	}
+
+	@Test
+	public void testGetAggregation() throws Exception {
+		List<Pair<String, Integer>> boldAndRanks = new Vector<>();
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("aaa bbb", 1));
+		boldAndRanks.add(new Pair<String, Integer>("aaa BBB", 1));
+		boldAndRanks.add(new Pair<String, Integer>("aaa bbb", 4));
+		boldAndRanks.add(new Pair<String, Integer>("aaa bbb ccc", 9));
+		boldAndRanks.add(new Pair<String, Integer>("aaa", 6));
+		boldAndRanks.add(new Pair<String, Integer>("bbb aaa", 5));
+		boldAndRanks.add(new Pair<String, Integer>("CCC", 5));
+		boldAndRanks.add(new Pair<String, Integer>("ccc", 6));
+		List<String> bolds = SmaphUtils.boldPairsToListLC(boldAndRanks);
+		assertEquals(3.0 / 8.0, SmaphUtils.getAggregation(bolds, "aaa"),
+				DELTA);
+		assertEquals(3.0 / 4.0,
+				SmaphUtils.getAggregation(bolds, "aaa ' bbb  "), DELTA);
+		assertEquals(1.0 , SmaphUtils.getAggregation(bolds, "BBB aaa"),
+				DELTA);
+		assertEquals(2.0 / 3.0, SmaphUtils.getAggregation(bolds, "ccc"),
+				DELTA);
+		assertEquals(0.0, SmaphUtils.getAggregation(bolds, "bbb"), DELTA);
+		assertEquals(1.0,
+				SmaphUtils.getAggregation(bolds, "aaa   &^*# bbb CCC"), DELTA);
+	}
+
+	@Test
+	public void testIsSubToken() throws Exception {
+		List<String> tokens1 = new Vector<>();
+		tokens1.add("aaa");
+		tokens1.add("bbb");
+		tokens1.add("ccc");
+		tokens1.add("ddd");
+		tokens1.add("eee");
+		
+		List<String> tokens2 = new Vector<>();
+		tokens2.add("bbb");
+		tokens2.add("ccc");
+		tokens2.add("ddd");
+		
+		List<String> tokens3 = new Vector<>();
+		tokens3.add("ccc");
+		tokens3.add("eee");
+		
+		List<String> tokens4 = new Vector<>();
+		tokens4.add("ccc");
+		tokens4.add("ddd");
+		tokens4.add("eee");
+
+		List<String> tokens5 = new Vector<>();
+		tokens5.add("aaa");
+		
+		assertEquals(false, SmaphUtils.isSubToken(tokens1, tokens1));
+		assertEquals(false, SmaphUtils.isSubToken(tokens2, tokens2));
+		assertEquals(false, SmaphUtils.isSubToken(tokens3, tokens3));
+		assertEquals(false, SmaphUtils.isSubToken(tokens4, tokens4));
+		assertEquals(false, SmaphUtils.isSubToken(tokens5, tokens5));
+		
+		assertEquals(true, SmaphUtils.isSubToken(tokens2, tokens1));
+		assertEquals(false, SmaphUtils.isSubToken(tokens1, tokens2));
+		
+		assertEquals(false, SmaphUtils.isSubToken(tokens3, tokens1));
+		assertEquals(false, SmaphUtils.isSubToken(tokens1, tokens3));
+		
+		assertEquals(true, SmaphUtils.isSubToken(tokens4, tokens1));
+		assertEquals(false, SmaphUtils.isSubToken(tokens1, tokens4));
+
+		assertEquals(true, SmaphUtils.isSubToken(tokens5, tokens1));
+		assertEquals(false, SmaphUtils.isSubToken(tokens1, tokens5));
+		
+		assertEquals(false, SmaphUtils.isSubToken(tokens3, tokens2));
+		assertEquals(false, SmaphUtils.isSubToken(tokens2, tokens3));
+		
+	}
+
 }
