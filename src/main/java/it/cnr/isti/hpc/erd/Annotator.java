@@ -20,6 +20,10 @@ import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.boldfilters.*;
 import it.acubelab.smaph.entityfilters.*;
 import it.acubelab.smaph.learn.GenerateModel;
+import it.acubelab.smaph.learn.GenerateTrainingAndTest;
+import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
+import it.acubelab.smaph.learn.normalizer.ScaleFeatureNormalizer;
+import it.acubelab.smaph.learn.normalizer.ZScoreFeatureNormalizer;
 import it.acubelab.smaph.linkback.BaselineLinkBack;
 import it.acubelab.smaph.linkback.DummyLinkBack;
 import it.acubelab.batframework.problems.CandidatesSpotter;
@@ -166,9 +170,9 @@ public class Annotator {
 	public List<Annotation> annotate(String runId, String textID, String query) {
 		if (runId.startsWith("miao")) {
 			String modelFileEF = GenerateModel.getModelFileNameBaseEF(
-					new Integer[] {1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37},
-					3.8, 5.6, 0.06, 0.03, 5.0)
-					+ "_" + "ANW";
+					new int[] {1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37},
+					3.8, 5.2, 0.06, 0.01, 100.0)
+					+ "_" + "ANW-erd";
 
 			runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
 					"COMMONNESS", "base", "jaccard", 0.6f,
@@ -217,23 +221,13 @@ public class Annotator {
 		int topKRelatedSearch = 0;
 
 		{
-			double[][] paramsToTest = new double[][] { /*{ 0.01, 1 },
-					{ 0.01, 5 }, { 0.01, 10 }, { 0.03, 1 }, { 0.03, 5 },
-					{ 0.03, 10 }, { 0.044, 1 }, { 0.044, 5 }, { 0.044, 10 },
-					{ 0.06, 1 }, { 0.06, 5 }, { 0.06, 10 },*/
-					{ 0.03, 5 },
-			};
+			double[][] paramsToTest = new double[][] {
+					{0.010, 100}
+					};
 			double[][] weightsToTest = new double[][] {
-					{ 3.8, 3.5 },
-					{ 3.8, 4.0 },
-					{ 3.8, 4.3 },
-					{ 3.8, 4.6 },
-					{ 3.8, 5.0 },
-					{ 3.8, 5.3 },
-					{ 3.8, 5.6 },
-
+					{ 3.8, 5.2 },
 			};
-			Integer[][] featuresSetsToTest = new Integer[][] {
+			int[][] featuresSetsToTest = new int[][] {
 					{1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37},
 			};
 			if (runId.startsWith("ftr_test_")) {
@@ -268,7 +262,7 @@ public class Annotator {
 				double C = paramsToTest[idParam][1];
 				String modelFileEF = GenerateModel.getModelFileNameBaseEF(
 						featuresSetsToTest[idftr], wPos, wNeg, edThr, gamma, C)
-						+ "_" + sources;
+						+ "_" + sources+"-erd";
 				runId = String.format(SMAPH_PARAMS_FORMAT, "wikisense", 0.0,
 						"COMMONNESS", "base", "jaccard", 0.6f,
 						"Frequency", edThr, "SvmEntityFilter",
@@ -380,7 +374,7 @@ public class Annotator {
 									.equals(svmEntityFilterModelBase))) {
 						try {
 							libSvmEntityFilter = new LibSvmEntityFilter(
-									svmEntityFilterModelBase);
+									svmEntityFilterModelBase+".model");
 						} catch (IOException e) {
 							e.printStackTrace();
 							throw new RuntimeException(e);
@@ -392,13 +386,13 @@ public class Annotator {
 
 			List<Annotation> res = annotatePure(query, textID,
 					new SmaphAnnotator(auxAnnotatorService, spotFilter,
-							entityFilter, new DummyLinkBack(),
+							entityFilter, new ZScoreFeatureNormalizer(svmEntityFilterModelBase+".zscore", new EntityFeaturePack()), new DummyLinkBack(),
 							includeSourceAnnotator, includeSourceNormalSearch,
 							includeSourceWikiSearch, wikiSearchPages,
 							includeSourceAnnotatorCandidates,
 							topKannotatorCandidates,
-							includeSourceRelatedSearch, topKRelatedSearch,
-							wikiApi, bingKey));
+							includeSourceRelatedSearch, topKRelatedSearch, false
+							, wikiApi, bingKey));
 
 			return res;
 		}
@@ -412,6 +406,20 @@ public class Annotator {
 			return annotatePure(query, textID, tagme);
 		} else if (runId.equals("void"))
 			return new Vector<>();
+		else if (runId.startsWith("experimental")){
+			String AFmodel = "/tmp/train_ann.dat.model";
+			String AFrange = "models/model_1-43_AF_0.060_0.02325581_5.00000000_ANW.range";
+
+			SmaphAnnotator smaph = null;
+			try {
+				smaph = GenerateTrainingAndTest.getDefaultBingAnnotatorAFRegressor(wikiApi, 0.06, bingKey, AFmodel, AFrange, -0.65);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			List<Annotation> res = annotatePure(query, textID, smaph);
+
+			return res;
+		}
 
 		throw new RuntimeException("unrecognized runID=" + runId);
 
