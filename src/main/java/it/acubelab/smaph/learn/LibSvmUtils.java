@@ -22,23 +22,6 @@ import libsvm.svm_node;
 
 public class LibSvmUtils {
 	
-	public static svm_node[] featuresArrayToNode(double[] ftrArray) {
-		Vector<Integer> pickedFtrsI = new Vector<>();
-		for (int ftrId=1; ftrId<ftrArray.length+1; ftrId++)
-			pickedFtrsI.add(ftrId);
-		return featuresArrayToNode(ftrArray, pickedFtrsI);
-	}
-		
-	public static svm_node[] featuresArrayToNode(double[] ftrArray, Vector<Integer> pickedFtrsI) {
-		svm_node[] ftrVect = new svm_node[pickedFtrsI.size()];
-		for (int i=0; i<pickedFtrsI.size(); i++) {
-			int ftrId = pickedFtrsI.get(i);
-			ftrVect[i] = new svm_node();
-			ftrVect[i].index = ftrId;
-			ftrVect[i].value = ftrArray[ftrId-1];
-		}
-		return ftrVect;
-	}
 /*
 	public static Pair<double[], double[]> findRanges(svm_problem problem) {
 		int nftrs = problem.x[0].length;

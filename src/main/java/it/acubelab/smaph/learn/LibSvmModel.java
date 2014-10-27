@@ -20,6 +20,7 @@ import it.acubelab.smaph.learn.featurePacks.FeaturePack;
 import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
 
 import java.io.IOException;
+import java.util.Vector;
 
 import libsvm.svm;
 import libsvm.svm_model;
@@ -34,6 +35,17 @@ import libsvm.svm_node;
 public abstract class LibSvmModel {
 	private svm_model model;
 	String modelFile;
+	
+	public static svm_node[] featuresArrayToNode(double[] ftrArray, int[] pickedFtrsI) {
+		svm_node[] ftrVect = new svm_node[pickedFtrsI.length];
+		for (int i=0; i<pickedFtrsI.length; i++) {
+			int ftrId = pickedFtrsI[i];
+			ftrVect[i] = new svm_node();
+			ftrVect[i].index = ftrId;
+			ftrVect[i].value = ftrArray[ftrId-1];
+		}
+		return ftrVect;
+	}
 
 	public LibSvmModel(String modelFile) throws IOException {
 		setModel(modelFile);
@@ -43,9 +55,17 @@ public abstract class LibSvmModel {
 		return predictScore(fp, fn) > 0.0;
 	}
 
+	private int[] getUsedFtr(){
+		svm_node[] firstSv = model.SV[0];
+		int[] res = new int[firstSv.length];
+		for (int i=0 ; i<res.length; i++)
+			res[i] = firstSv[i].index;
+		return res;
+	}
+	
 	public double predictScore(FeaturePack fp, FeatureNormalizer fn) {
-		svm_node[] ftrVect = LibSvmUtils.featuresArrayToNode(fn
-				.ftrToNormalizedFtrArray(fp));
+		svm_node[] ftrVect = featuresArrayToNode(fn
+				.ftrToNormalizedFtrArray(fp), getUsedFtr());
 		return svm.svm_predict(model, ftrVect);
 	}
 

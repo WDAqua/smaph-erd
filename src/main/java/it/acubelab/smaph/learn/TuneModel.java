@@ -31,6 +31,7 @@ import it.acubelab.smaph.learn.normalizer.ScaleFeatureNormalizer;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -159,7 +160,7 @@ public class TuneModel {
 	}
 
 	public static svm_model trainModel(svm_parameter param, 
-			Vector<Integer> pickedFtrs, svm_problem trainProblem) {
+			svm_problem trainProblem) {
 		String error_msg = svm.svm_check_parameter(trainProblem, param);
 
 		if (error_msg != null) {
@@ -177,7 +178,7 @@ public class TuneModel {
 			double gamma, double C) {
 
 		Vector<ModelConfigurationResult> globalScoreboard = new Vector<>();
-		Vector<Integer> allFtrs = SmaphUtils.getAllFtrVect(trainGatherer
+		int[] allFtrs = SmaphUtils.getAllFtrVect(trainGatherer
 				.getFtrCount());
 		double bestwPos;
 		double bestwNeg;
@@ -239,7 +240,7 @@ public class TuneModel {
 				System.err.printf("Done feature selection (iteration %d).%n",
 						iteration);
 			}
-			Vector<Integer> bestFeatures = bestFtr.getFeatures();
+			int[] bestFeatures = bestFtr.getFeatures();
 
 			// Fine-tune weights
 			{
@@ -289,11 +290,11 @@ public class TuneModel {
 		private double wPos, wNeg, editDistanceThreshold, gamma, C;
 		private ExampleGatherer<EntityFeaturePack> trainGatherer;
 		private ExampleGatherer<EntityFeaturePack> testGatherer;
-		private Vector<Integer> features;
+		private int[] features;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public ParameterTester(double wPos, double wNeg,
-				double editDistanceThreshold, Vector<Integer> features,
+				double editDistanceThreshold, int[] features,
 				ExampleGatherer<EntityFeaturePack> trainEQFGatherer,
 				ExampleGatherer<EntityFeaturePack> testEQFGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
@@ -305,7 +306,6 @@ public class TuneModel {
 			this.features = features;
 			this.trainGatherer = trainEQFGatherer;
 			this.testGatherer = testEQFGatherer;
-			Collections.sort(this.features);
 			this.scoreboard = scoreboard;
 			this.gamma = gamma;
 			this.C = C;
@@ -347,7 +347,7 @@ public class TuneModel {
 
 			svm_parameter param = getParametersEF(wPos, wNeg, gamma, C);
 
-			svm_model model = trainModel(param, this.features,
+			svm_model model = trainModel(param,
 					trainProblem);
 
 			// Generate test problem and scale it.
@@ -385,14 +385,14 @@ public class TuneModel {
 		private OptimizaionProfiles optProfile;
 		private double boldFilterThreshold;
 		private double kappaPos, kappaNeg;
-		private Vector<Integer> features;
+		private int[] features;
 		Vector<ModelConfigurationResult> scoreboard;
 		private int steps;
 
 		public WeightSelector(double wPosMin, double wPosMax, double kappaPos,
 				double wNegMin, double wNegMax, double kappaNeg, double gamma,
 				double C, int steps, double boldFilterThreshold,
-				Vector<Integer> features,
+				int[] features,
 				ExampleGatherer<EntityFeaturePack> trainEQFGatherer,
 				ExampleGatherer<EntityFeaturePack> testEQFGatherer,
 				OptimizaionProfiles optProfile,
@@ -525,18 +525,21 @@ public class TuneModel {
 				throw new RuntimeException(e1);
 			}
 
-			while (bestBase.getFeatures().size() > 1) {
+			while (bestBase.getFeatures().length > 1) {
 				ExecutorService execServ = Executors
 						.newFixedThreadPool(THREADS_NUM);
 				List<Future<ModelConfigurationResult>> futures = new Vector<>();
 				HashMap<Future<ModelConfigurationResult>, Integer> futureToFtrId = new HashMap<>();
 
 				for (int testFtrId : bestBase.getFeatures()) {
-					Vector<Integer> pickedFtrsIteration = new Vector<>(
-							bestBase.getFeatures());
-					pickedFtrsIteration.remove(pickedFtrsIteration
-							.indexOf(testFtrId));
-
+					int[] pickedFtrsIteration = new int[bestBase.getFeatures().length -1];
+					int j=0;
+					for (int i=0; i<bestBase.getFeatures().length; i++)
+						if (bestBase.getFeatures()[i] == testFtrId)
+							continue;
+						else
+							pickedFtrsIteration[j++] = bestBase.getFeatures()[i];
+							
 					try {
 						Future<ModelConfigurationResult> future = execServ
 								.submit(new ParameterTester(wPos, wNeg,
@@ -606,8 +609,9 @@ public class TuneModel {
 		@Override
 		public void run() {
 
-			Vector<Integer> ftrToTry = SmaphUtils.getAllFtrVect(testGatherer
-					.getFtrCount());
+			HashSet<Integer> ftrToTry = new HashSet<>();
+			for (int f : SmaphUtils.getAllFtrVect(testGatherer.getFtrCount()))
+				ftrToTry.add(f);
 
 			ModelConfigurationResult bestBase = null;
 			while (!ftrToTry.isEmpty()) {
@@ -618,10 +622,17 @@ public class TuneModel {
 				HashMap<Future<ModelConfigurationResult>, Integer> futureToFtrId = new HashMap<>();
 
 				for (int testFtrId : ftrToTry) {
-					Vector<Integer> pickedFtrsIteration = new Vector<>(
-							bestBase == null ? new Vector<Integer>()
-									: bestBase.getFeatures());
-					pickedFtrsIteration.add(testFtrId);
+					int[] pickedFtrsIteration;
+					if (bestBase == null)
+						pickedFtrsIteration = new int[] { testFtrId };
+					else {
+						pickedFtrsIteration = new int[bestBase.getFeatures().length + 1];
+						for (int i = 0; i < bestBase.getFeatures().length; i++)
+							pickedFtrsIteration[i] = bestBase.getFeatures()[i];
+						pickedFtrsIteration[pickedFtrsIteration.length - 1] = testFtrId;
+						Arrays.sort(pickedFtrsIteration);
+
+					}
 
 					try {
 						Future<ModelConfigurationResult> future = execServ
@@ -659,7 +670,7 @@ public class TuneModel {
 					break;
 				} else {
 					bestBase = bestIter;
-					ftrToTry.remove(ftrToTry.indexOf(bestFtrId));
+					ftrToTry.remove(Integer.valueOf(bestFtrId));
 				}
 
 			}

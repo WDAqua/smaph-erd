@@ -95,12 +95,12 @@ public class ExampleGatherer <T extends FeaturePack> {
 	 * @return a libsvm problem (that is, a list of examples) including only
 	 *         features given in pickedFtrs.
 	 */
-	public svm_problem generateLibSvmProblem(Vector<Integer> pickedFtrs, FeatureNormalizer fn) {
+	public svm_problem generateLibSvmProblem(int[] pickedFtrs, FeatureNormalizer fn) {
 		Vector<Double> targets = new Vector<Double>();
 		Vector<svm_node[]> ftrVectors = new Vector<svm_node[]>();
 		Vector<Pair<T, Double>> plainVectors = getPlain(featureVectorsAndGoldGroups);
 		for (Pair<T, Double> vectAndGold : plainVectors) {
-			ftrVectors.add(LibSvmUtils.featuresArrayToNode(fn.ftrToNormalizedFtrArray(vectAndGold.first),
+			ftrVectors.add(LibSvmModel.featuresArrayToNode(fn.ftrToNormalizedFtrArray(vectAndGold.first),
 					pickedFtrs));
 			targets.add(vectAndGold.second);
 		}
@@ -113,7 +113,7 @@ public class ExampleGatherer <T extends FeaturePack> {
 	 * @return a list of libsvm problems, one per instance.
 	 */
 	public List<svm_problem> generateLibSvmProblemOnePerInstance(
-			Vector<Integer> pickedFtrs, FeatureNormalizer fn) {
+			int[] pickedFtrs, FeatureNormalizer fn) {
 
 		Vector<svm_problem> result = new Vector<>();
 
@@ -121,7 +121,7 @@ public class ExampleGatherer <T extends FeaturePack> {
 			Vector<Double> targets = new Vector<Double>();
 			Vector<svm_node[]> ftrVectors = new Vector<svm_node[]>();
 			for (Pair<T, Double> vectAndGold : ftrVectorsAndGolds) {
-				ftrVectors.add(LibSvmUtils.featuresArrayToNode(
+				ftrVectors.add(LibSvmModel.featuresArrayToNode(
 						fn.ftrToNormalizedFtrArray(vectAndGold.first), pickedFtrs));
 				targets.add(vectAndGold.second);
 			}

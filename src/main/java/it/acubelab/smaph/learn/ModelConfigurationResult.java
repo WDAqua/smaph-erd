@@ -24,7 +24,7 @@ import java.util.Vector;
 
 public class ModelConfigurationResult implements Serializable {
 	private static final long serialVersionUID = 1L;
-	private Vector<Integer> pickedFtrs;
+	private int[] pickedFtrs;
 	private double editDistanceThreshold;
 	private double wPos;
 	private double wNeg;
@@ -35,10 +35,10 @@ public class ModelConfigurationResult implements Serializable {
 	private int tn;
 	private float microf1, fnRate, macrof1, macroPrec, macroRec;
 
-	public ModelConfigurationResult(Vector<Integer> pickedFtrsI, double wPos,
+	public ModelConfigurationResult(int[] pickedFtrsI, double wPos,
 			double wNeg, double editDistanceThreshold, int tp, int fp, int fn,
 			int tn, float microF1, float macroF1, float macroRec, float macroPrec) {
-		this.pickedFtrs = new Vector<>(pickedFtrsI);
+		this.pickedFtrs = pickedFtrsI.clone();
 		this.wPos = wPos;
 		this.wNeg = wNeg;
 		this.editDistanceThreshold = editDistanceThreshold;
@@ -58,7 +58,7 @@ public class ModelConfigurationResult implements Serializable {
 		String ftrsString = "";
 		for (int ftrId : pickedFtrs)
 			ftrsString += ftrId + ",";
-		ftrsString = pickedFtrs.isEmpty() ? "null!" : ftrsString.substring(0,
+		ftrsString = pickedFtrs.length == 0 ? "null!" : ftrsString.substring(0,
 				ftrsString.length() - 1);
 		return String
 				.format("Features:%s wPos:%.5f wNeg:%.5f ED-threshold=%.2f tot=%d TP=%d FP=%d FN=%d TN=%d -> FN_rate=%.2f%% mic-F1=%.2f%% mac-P/R/F1=%.2f%%/%.2f%%/%.2f%%",
@@ -67,7 +67,7 @@ public class ModelConfigurationResult implements Serializable {
 						microf1 * 100, macroPrec*100,macroRec*100, macrof1 * 100);
 	}
 
-	public Vector<Integer> getFeatures() {
+	public int[] getFeatures() {
 		return this.pickedFtrs;
 	}
 
@@ -137,7 +137,7 @@ public class ModelConfigurationResult implements Serializable {
 			if (best == null
 					|| best.worseThan(conf, optProfile, optProfileThreshold)
 					|| (best.equalResult(conf, optProfile, optProfileThreshold) && best
-							.getFeatures().size() > conf.getFeatures().size()))
+							.getFeatures().length > conf.getFeatures().length))
 				best = conf;
 		return best;
 	}

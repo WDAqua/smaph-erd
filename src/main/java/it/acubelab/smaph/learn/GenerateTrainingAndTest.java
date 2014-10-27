@@ -235,7 +235,7 @@ public class GenerateTrainingAndTest {
 		return new SmaphAnnotator(wikiSense,
 				new FrequencyBoldFilter((float)editDistanceSpotFilterThreshold),entityFilter
 				, efNorm, lb, true, true, true,
-				10, false, 0, false, 0, wikiApi, bingKey);
+				10, false, 0, false, 0, false, wikiApi, bingKey);
 
 	}
 	public static SmaphAnnotator getDefaultBingAnnotatorGatherer(
@@ -254,7 +254,7 @@ public class GenerateTrainingAndTest {
 			ClassNotFoundException, IOException {
 		return getDefaultBingAnnotatorParam( wikiApi, 
 			 editDistanceSpotFilterThreshold, 
-			 bingKey, new LibSvmEntityFilter(EFModelFileBase+".model"), new ScaleFeatureNormalizer(EFModelFileBase+".range", new EntityFeaturePack()), new DummyLinkBack());
+			 bingKey, new LibSvmEntityFilter(EFModelFileBase+".model"), new ZScoreFeatureNormalizer(EFModelFileBase+".zscore", new EntityFeaturePack()), new DummyLinkBack());
 	}
 	public static SmaphAnnotator getDefaultBingAnnotatorLB(
 			WikipediaApiInterface wikiApi, 
