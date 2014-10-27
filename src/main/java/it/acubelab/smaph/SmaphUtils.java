@@ -39,6 +39,7 @@ import java.util.Vector;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.tartarus.snowball.ext.EnglishStemmer;
 
@@ -141,11 +142,11 @@ public class SmaphUtils {
 	 *            the number of features.
 	 * @return a vector containing all feature ids from 1 to ftrCount.
 	 */
-	public static Vector<Integer> getAllFtrVect(int ftrCount) {
+	public static int[] getAllFtrVect(int ftrCount) {
 		Vector<Integer> res = new Vector<>();
 		for (int i = 1; i < ftrCount + 1; i++)
 			res.add(i);
-		return res;
+		return ArrayUtils.toPrimitive(res.toArray(new Integer[]{}));
 	}
 
 	/**
@@ -439,5 +440,104 @@ public class SmaphUtils {
 		return annsToRegressorScore;
 	}
 
+	/**
+	 * @param tokensA
+	 * @param tokensB
+	 * @return true if tokensA is a strict sublist of tokensB (i.e. |tokensA| < |tokensB| and there are two indexes i and j s.t. tokensA.equals(tokensB.subList(i, j))).
+	 */
+	public static boolean isSubToken(List<String> tokensA, List<String> tokensB){
+		if (tokensA.size() >= tokensB.size())
+			return false;
+		for (int i=0 ; i<=tokensB.size() - tokensA.size(); i++)
+			if (tokensA.equals(tokensB.subList(i, i+tokensA.size())))
+				return true;
+		return false;
+	}
+	
+	
+	/**
+	 * @param bolds
+	 *            a list of bolds
+	 * @param bold
+	 *            a bold
+	 * @return the proportion between the number of times bold appears in the
+	 *         list and the number of times in which shorter bolds having at
+	 *         least one word in common appear in the list.
+	 */
+	public static double getFragmentation(List<String> bolds, String bold) {
+		int boldCount = 0;
+		int fragmentsCount = 0;
+		List<String> tokensBold = tokenize(stemString(bold, new EnglishStemmer()));
 
+		for (String b : bolds) {
+			List<String> tokensB = tokenize(stemString(b, new EnglishStemmer()));
+			if (tokensBold.equals(tokensB))
+				boldCount++;
+			else {
+				if (isSubToken(tokensB, tokensBold))
+				fragmentsCount ++;
+				/*if (tokensB.size() < tokensBold.size()) {
+					boolean found = false;
+					for (String tokenB : tokensB)
+						for (String tokenBold : tokensBold)
+							if (tokenB.equals(tokenBold)) {
+								found = true;
+								break;
+							}
+					if (found)
+						fragmentsCount++;
+				}*/
+			}
+		}
+		if (boldCount == 0)
+			return 0.0;
+		return (double) boldCount / (double) (Math.pow(fragmentsCount, 1.4) + boldCount);
+	}
+	
+	/**
+	 * @param bolds
+	 *            a list of bolds
+	 * @param bold
+	 *            a bold
+	 * @return the proportion between the number of times bold appears in the
+	 *         list and the number of times in which longer bolds containing all
+	 *         words of bold appear in the list.
+	 */
+	public static double getAggregation(List<String> bolds, String bold) {
+		int boldCount = 0;
+		int fragmentsCount = 0;
+		List<String> tokensBold = tokenize(stemString(bold, new EnglishStemmer()));
+
+		for (String b : bolds) {
+			List<String> tokensB = tokenize(stemString(b, new EnglishStemmer()));
+			if (tokensBold.equals(tokensB))
+				boldCount++;
+			else {
+				if (isSubToken(tokensBold, tokensB))
+					fragmentsCount ++;
+				/*if (tokensB.size() > tokensBold.size()) {
+					boolean cover = true;
+					for (String tokenBold : tokensBold)
+						if (!tokensB.contains(tokenBold)){
+							cover = false;
+							break;
+						}
+					if (cover)
+						fragmentsCount++;
+				}*/
+			}
+		}
+		if (boldCount == 0)
+			return 0.0;
+		return (double) boldCount / (double) (Math.pow(fragmentsCount, 1.4) + boldCount);
+	}
+
+
+	public static List<String> boldPairsToListLC(
+			List<Pair<String, Integer>> boldAndRanks) {
+		List<String> res = new Vector<>();
+		for (Pair<String, Integer> boldAndRank : boldAndRanks)
+			res.add(boldAndRank.first.toLowerCase());
+		return res;
+	}
 }

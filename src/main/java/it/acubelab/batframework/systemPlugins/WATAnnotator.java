@@ -49,8 +49,8 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 	private final String method, relatedness, windowSize, minCommonness,
 			minLinkProbability, epsilon, kappa;
 	private String sortBy;
-	private HashMap<String, HashMap<String, Double>> additionalInfo = new HashMap<>();
-	private HashMap<String, List<HashMap<String, Double>>> additionalCandidatesInfo = new HashMap<>();
+	private HashMap<Mention, HashMap<String, Double>> additionalInfo = new HashMap<>();
+	private HashMap<Mention, List<HashMap<String, Double>>> additionalCandidatesInfo = new HashMap<>();
 	private boolean brutalD2WReduction = false;
 	private static HashMap<String, byte[]> url2jsonCache = new HashMap<>();
 	private static long flushCounter = 0;
@@ -193,15 +193,14 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 			if (mentions.contains(m))
 				res.add(new Annotation(m.getPosition(), m.getLength(), id));
 
-			String mention = text.substring(start, end);
-			if (!additionalInfo.containsKey(mention))
-				additionalInfo.put(mention, new HashMap<String, Double>());
-			additionalInfo.get(mention).put("lp", lp);
-			additionalInfo.get(mention).put("commonness", commonness);
-			additionalInfo.get(mention).put("rhoScore", rhoScore);
-			additionalInfo.get(mention).put("ambiguity", ambiguity);
-			additionalInfo.get(mention).put("localCoherence", localCoherence);
-			additionalInfo.get(mention).put("pageRank", pageRank);
+			if (!additionalInfo.containsKey(m))
+				additionalInfo.put(m, new HashMap<String, Double>());
+			additionalInfo.get(m).put("lp", lp);
+			additionalInfo.get(m).put("commonness", commonness);
+			additionalInfo.get(m).put("rhoScore", rhoScore);
+			additionalInfo.get(m).put("ambiguity", ambiguity);
+			additionalInfo.get(m).put("localCoherence", localCoherence);
+			additionalInfo.get(m).put("pageRank", pageRank);
 
 			JSONArray jsRankings = js_ann.getJSONArray("ranking");
 			int rank = 0;
@@ -222,10 +221,10 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 				values.put("synonimy", (double) synonimy);
 				values.put("lp", (double) lp);
 				values.put("ambiguity", (double) ambiguity);
-				if (!additionalCandidatesInfo.containsKey(mention))
-					additionalCandidatesInfo.put(mention,
+				if (!additionalCandidatesInfo.containsKey(m))
+					additionalCandidatesInfo.put(m,
 							new Vector<HashMap<String, Double>>());
-				additionalCandidatesInfo.get(mention).add(values);
+				additionalCandidatesInfo.get(m).add(values);
 				rank++;
 			}
 		}
@@ -523,15 +522,15 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 		return res;
 	}
 
-	public HashMap<String, HashMap<String, Double>> getLastQueryAdditionalInfo() {
-		HashMap<String, HashMap<String, Double>> clone = new HashMap<>(
+	public HashMap<Mention, HashMap<String, Double>> getLastQueryAdditionalInfo() {
+		HashMap<Mention, HashMap<String, Double>> clone = new HashMap<>(
 				additionalInfo);
 		additionalInfo.clear();
 		return clone;
 	}
 
-	public HashMap<String, List<HashMap<String, Double>>> getLastQueryAdditionalCandidatesInfo() {
-		HashMap<String, List<HashMap<String, Double>>> clone = new HashMap<>(
+	public HashMap<Mention, List<HashMap<String, Double>>> getLastQueryAdditionalCandidatesInfo() {
+		HashMap<Mention, List<HashMap<String, Double>>> clone = new HashMap<>(
 				additionalCandidatesInfo);
 		additionalCandidatesInfo.clear();
 		return clone;

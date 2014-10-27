@@ -131,7 +131,7 @@ public class RestService {
 			return new SmaphAnnotator(auxAnnotatorService,
 					new FrequencyBoldFilter(0.06f), new LibSvmEntityFilter(
 							modelBase), new ScaleFeatureNormalizer(modelBase+".range", new EntityFeaturePack()), new DummyLinkBack(), true, true, true,
-					10, false, -1, false, -1, wikiApi, bingKey);
+					10, false, -1, false, -1, false, wikiApi, bingKey);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);
