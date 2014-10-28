@@ -10,10 +10,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Vector;
 
-import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 
-public class BindingFeaturePack extends FeaturePack {
+public class BindingFeaturePack extends FeaturePack<HashSet<Annotation>> {
 	private static final long serialVersionUID = 1L;
 
 	public BindingFeaturePack(
@@ -138,23 +137,6 @@ public class BindingFeaturePack extends FeaturePack {
 		return collapseEntityFeatures(allEntitiesFeatures);
 	}
 
-	
-	private static Triple<Double, Double, Double> getMinMaxAvg(List<Double> values) {
-		if (values.isEmpty())
-			return new ImmutableTriple<Double, Double, Double>(0.0, 0.0, 0.0);
-		
-		double minVal = Double.POSITIVE_INFINITY;
-		double maxVal = Double.NEGATIVE_INFINITY;
-		double avgVal = 0.0;
-		for (double v : values) {
-			minVal = Math.min(v, minVal);
-			maxVal = Math.max(v, maxVal);
-			avgVal += v / values.size();
-		}
-
-		return new ImmutableTriple<Double, Double, Double>(minVal, maxVal,
-				avgVal);
-	}
 
 	private static HashMap<String, Double> getFeatures(
 			HashSet<Annotation> binding, String query,
@@ -205,12 +187,12 @@ public class BindingFeaturePack extends FeaturePack {
 		}
 		*/
 
-		Triple<Double, Double, Double> minMaxAvgEDBold = getMinMaxAvg(minEdsBold);
+		Triple<Double, Double, Double> minMaxAvgEDBold = SmaphUtils.getMinMaxAvg(minEdsBold);
 		bindingFeatures.put("min_min_edit_distance_bold", minMaxAvgEDBold.getLeft());
 		bindingFeatures.put("max_min_edit_distance_bold", minMaxAvgEDBold.getMiddle());
 		bindingFeatures.put("avg_min_edit_distance_bold", minMaxAvgEDBold.getRight());
 		
-		Triple<Double, Double, Double> minMaxAvgEDTitle = getMinMaxAvg(minEdsTitle);
+		Triple<Double, Double, Double> minMaxAvgEDTitle = SmaphUtils.getMinMaxAvg(minEdsTitle);
 		bindingFeatures.put("min_min_edit_distance_title", minMaxAvgEDTitle.getLeft());
 		bindingFeatures.put("max_min_edit_distance_title", minMaxAvgEDTitle.getMiddle());
 		bindingFeatures.put("avg_min_edit_distance_title", minMaxAvgEDTitle.getRight());
@@ -234,7 +216,7 @@ public class BindingFeaturePack extends FeaturePack {
 			for (Annotation ann : binding)
 				scores.add(annotationRegressorScores.get(ann));
 
-			Triple<Double, Double, Double> minMaxAvgAcores = getMinMaxAvg(scores);
+			Triple<Double, Double, Double> minMaxAvgAcores = SmaphUtils.getMinMaxAvg(scores);
 			bindingFeatures.put("min_annotation_regressor_score",
 					minMaxAvgAcores.getLeft());
 			bindingFeatures.put("max_annotation_regressor_score",

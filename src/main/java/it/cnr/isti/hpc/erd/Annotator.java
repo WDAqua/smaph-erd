@@ -391,8 +391,8 @@ public class Annotator {
 							includeSourceWikiSearch, wikiSearchPages,
 							includeSourceAnnotatorCandidates,
 							topKannotatorCandidates,
-							includeSourceRelatedSearch, topKRelatedSearch, false
-							, wikiApi, bingKey));
+							includeSourceRelatedSearch, topKRelatedSearch, false, -1, null
+							, null, wikiApi, bingKey));
 
 			return res;
 		}

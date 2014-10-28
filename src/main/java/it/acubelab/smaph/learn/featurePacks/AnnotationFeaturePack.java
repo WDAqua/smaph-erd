@@ -8,7 +8,7 @@ import java.util.*;
 
 import org.tartarus.snowball.ext.EnglishStemmer;
 
-public class AnnotationFeaturePack extends FeaturePack {
+public class AnnotationFeaturePack extends FeaturePack<Annotation> {
 
 	private static final long serialVersionUID = 1L;
 

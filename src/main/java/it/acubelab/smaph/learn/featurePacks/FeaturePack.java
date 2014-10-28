@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 
-public abstract class FeaturePack implements Serializable {
+public abstract class FeaturePack <T extends Object> implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private double[] featuresArray;

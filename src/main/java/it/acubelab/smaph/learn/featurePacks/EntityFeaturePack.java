@@ -1,8 +1,11 @@
 package it.acubelab.smaph.learn.featurePacks;
 
+import it.acubelab.batframework.data.Tag;
+
 import java.util.HashMap;
 
-public class EntityFeaturePack extends FeaturePack {
+
+public class EntityFeaturePack extends FeaturePack<Tag> {
 	private static final long serialVersionUID = 1L;
 
 	public EntityFeaturePack(HashMap<String, Double> ftrs) {
@@ -51,10 +54,38 @@ public class EntityFeaturePack extends FeaturePack {
 			"s2_editDistanceBolds",
 			"s2_capitalizedBolds",
 			"s2_avgBoldsWords",
-			"is_named_entity", //38
+			"s1_is_named_entity",
+			"s2_is_named_entity",
+			"s3_is_named_entity", //40
+			"s6_is_named_entity",
 			"s1_fragmentation",
 			"s1_aggregation",
 			"is_s6",
+			"s6_webTotal",
+			"s6_freq",
+			"s6_avgRank",
+			"s6_pageRank",
+			"s6_min_rho",
+			"s6_max_rho",       //50
+			"s6_avg_rho",
+			"s6_min_lp",
+			"s6_max_lp",
+			"s6_avg_lp",
+			"s6_min_commonness",
+			"s6_max_commonness",
+			"s6_avg_commonness",
+			"s6_min_ambig",
+			"s6_max_ambig",
+			"s6_avg_ambig",		//60
+			"s6_min_min_bold_ed",
+			"s6_max_min_bold_ed",
+			"s6_avg_min_bold_ed",
+			"s6_min_min_mention_ed",
+			"s6_max_min_mention_ed",
+			"s6_avg_min_mention_ed",
+			"s6_min_mention_bold_overlap",
+			"s6_max_mention_bold_overlap",
+			"s6_avg_mention_bold_overlap", //69
 	};
 
 	@Override
@@ -88,15 +119,15 @@ public class EntityFeaturePack extends FeaturePack {
 			for (String ftrName : features.keySet())
 				if (ftrName.startsWith(sourcePrefix))
 					sourceFtrCount++;
-			int baseFeatures = 7;
+			int baseFeatures = 6;
 			if (sourcePrefix.equals("s1_"))
-				found = sourceFtrCount == 11
+				found = sourceFtrCount == 12
 						&& features.size() == sourceFtrCount + baseFeatures;
 			if (sourcePrefix.equals("s2_"))
-				found = sourceFtrCount == 8
+				found = sourceFtrCount == 9
 						&& features.size() == sourceFtrCount + baseFeatures;
 			if (sourcePrefix.equals("s3_"))
-				found = sourceFtrCount == 8
+				found = sourceFtrCount == 9
 						&& features.size() == sourceFtrCount + baseFeatures;
 			if (sourcePrefix.equals("s4_"))
 				found = sourceFtrCount == 0
@@ -105,7 +136,7 @@ public class EntityFeaturePack extends FeaturePack {
 				found = sourceFtrCount == 8
 						&& features.size() == sourceFtrCount + baseFeatures;
 			if (sourcePrefix.equals("s6_"))
-				found = sourceFtrCount == 4
+				found = sourceFtrCount == 26
 						&& features.size() == sourceFtrCount + baseFeatures;
 
 			if (found)

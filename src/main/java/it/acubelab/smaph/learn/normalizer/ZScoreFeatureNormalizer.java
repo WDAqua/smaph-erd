@@ -22,12 +22,12 @@ public class ZScoreFeatureNormalizer extends FeatureNormalizer {
 		load(zScoreFile, fp);
 	}
 
-	public <E extends FeaturePack> ZScoreFeatureNormalizer(
+	public <E extends Object> ZScoreFeatureNormalizer(
 			ExampleGatherer<E> exampleGatherer) {
-		List<E> ftrPacks = exampleGatherer.getAllFeaturePacks();
+		List<FeaturePack<E>> ftrPacks = exampleGatherer.getAllFeaturePacks();
 		for (String ftrName : ftrPacks.get(0).getFeatureNames()) {
 			Vector<Double> ftrValues = new Vector<>();
-			for (E fp : ftrPacks)
+			for (FeaturePack<E> fp : ftrPacks)
 				if (fp.featureIsSet(ftrName))
 					ftrValues.add(fp.getFeature(ftrName));
 			double[] ftrValArray = ArrayUtils.toPrimitive(ftrValues

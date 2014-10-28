@@ -41,6 +41,8 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.apache.commons.lang3.tuple.Triple;
 import org.tartarus.snowball.ext.EnglishStemmer;
 
 public class SmaphUtils {
@@ -540,4 +542,24 @@ public class SmaphUtils {
 			res.add(boldAndRank.first.toLowerCase());
 		return res;
 	}
+	
+
+	
+	public static Triple<Double, Double, Double> getMinMaxAvg(List<Double> values) {
+		if (values.isEmpty())
+			return new ImmutableTriple<Double, Double, Double>(0.0, 0.0, 0.0);
+		
+		double minVal = Double.POSITIVE_INFINITY;
+		double maxVal = Double.NEGATIVE_INFINITY;
+		double avgVal = 0.0;
+		for (double v : values) {
+			minVal = Math.min(v, minVal);
+			maxVal = Math.max(v, maxVal);
+			avgVal += v / values.size();
+		}
+
+		return new ImmutableTriple<Double, Double, Double>(minVal, maxVal,
+				avgVal);
+	}
 }
+

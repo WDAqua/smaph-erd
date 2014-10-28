@@ -11,13 +11,14 @@ public class ScaleFeatureNormalizer extends FeatureNormalizer {
 	HashMap<String, Double> max = new HashMap<>();
 	HashMap<String, Double> min = new HashMap<>();
 
-	public ScaleFeatureNormalizer(String rangeFile, FeaturePack fp) {
+	public <E extends Object> ScaleFeatureNormalizer(String rangeFile,
+			FeaturePack<E> fp) {
 		loadRanges(rangeFile, fp);
 	}
 
-	public <E extends FeaturePack> ScaleFeatureNormalizer(
+	public <E extends Object> ScaleFeatureNormalizer(
 			ExampleGatherer<E> exampleGatherer) {
-		for (E fp : exampleGatherer.getAllFeaturePacks())
+		for (FeaturePack<E> fp : exampleGatherer.getAllFeaturePacks())
 			for (String ftrName : fp.getFeatureNames()) {
 				if (!fp.featureIsSet(ftrName))
 					continue;

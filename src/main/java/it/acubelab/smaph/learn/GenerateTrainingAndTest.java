@@ -48,6 +48,7 @@ import it.acubelab.smaph.linkback.annotationRegressor.LibLinearAnnotationRegress
 import it.acubelab.smaph.linkback.bindingGenerator.DefaultBindingGenerator;
 import it.acubelab.smaph.linkback.bindingRegressor.LibLinearBindingRegressor;
 import it.acubelab.smaph.main.ERDDatasetFilter;
+import it.acubelab.smaph.snippetannotationfilters.FrequencyAnnotationFilter;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.FileNotFoundException;
@@ -60,22 +61,22 @@ public class GenerateTrainingAndTest {
 	
 	public enum OptDataset {ERD_CHALLENGE, SMAPH_DATASET}
 	public static void gatherExamples(SmaphAnnotator bingAnnotator,
-			A2WDataset ds, ExampleGatherer<EntityFeaturePack> entityFilterGatherer, ExampleGatherer<BindingFeaturePack> linkBackGatherer, ExampleGatherer<AnnotationFeaturePack> annotationGatherer,
+			A2WDataset ds, ExampleGatherer<Tag> entityFilterGatherer, ExampleGatherer<HashSet<Annotation>> linkBackGatherer, ExampleGatherer<Annotation> annotationGatherer,
 			WikipediaToFreebase wikiToFreeb, AnnotationRegressor ar, FeatureNormalizer annFn, boolean keepNEOnly) throws Exception {
 		gatherExamples(bingAnnotator, ds, entityFilterGatherer,
 				linkBackGatherer, annotationGatherer, wikiToFreeb, ar,annFn, keepNEOnly, -1);
 	}
 	public static void gatherExamples(SmaphAnnotator bingAnnotator,
-			A2WDataset ds, ExampleGatherer<EntityFeaturePack> entityFilterGatherer, ExampleGatherer<BindingFeaturePack> linkBackGatherer,ExampleGatherer<AnnotationFeaturePack> annotationGatherer,
+			A2WDataset ds, ExampleGatherer<Tag> entityFilterGatherer, ExampleGatherer<HashSet<Annotation>> linkBackGatherer,ExampleGatherer<Annotation> annotationGatherer,
 			WikipediaToFreebase wikiToFreeb, AnnotationRegressor ar, FeatureNormalizer annFn, boolean keepNEOnly, int limit) throws Exception {
 			limit = limit ==-1? ds.getSize() : Math.min(limit, ds.getSize());
 		for (int i = 0; i < limit; i++) {
 			String query = ds.getTextInstanceList().get(i);
 			HashSet<Tag> goldStandard = ds.getC2WGoldStandardList().get(i);
 			HashSet<Annotation> goldStandardAnn = ds.getA2WGoldStandardList().get(i);
-			List<Pair<EntityFeaturePack, Boolean>> EFVectorsToPresence = null;
-			List<Pair<BindingFeaturePack, Double>> LbVectorsToF1 = null;
-			List<Pair<AnnotationFeaturePack, Boolean>> annVectorsToPresence = null;
+			List<Pair<FeaturePack<Tag>, Boolean>> EFVectorsToPresence = null;
+			List<Pair<FeaturePack<HashSet<Annotation>>, Double>> LbVectorsToF1 = null;
+			List<Pair<FeaturePack<Annotation>, Boolean>> annVectorsToPresence = null;
 			
 			if (entityFilterGatherer != null)
 				EFVectorsToPresence = new Vector<>();
@@ -98,23 +99,23 @@ public class GenerateTrainingAndTest {
 		}
 	}
 
-	private static <E extends FeaturePack> List<Pair<E, Double>> goldBoolToDouble(
-			List<Pair<E, Boolean>> eFVectorsToPresence) {
-		List<Pair<E, Double>> res = new Vector<>();
-		for (Pair<E, Boolean> p : eFVectorsToPresence)
-			res.add(new Pair<E, Double>(p.first, p.second? 1.0
+	private static <E extends Object> List<Pair<FeaturePack<E>, Double>> goldBoolToDouble(
+			List<Pair<FeaturePack<E>, Boolean>> eFVectorsToPresence) {
+		List<Pair<FeaturePack<E>, Double>> res = new Vector<>();
+		for (Pair<FeaturePack<E>, Boolean> p : eFVectorsToPresence)
+			res.add(new Pair<FeaturePack<E>, Double>(p.first, p.second? 1.0
 					: -1.0));
 		return res;
 	}
 
 	public static void gatherExamplesTrainingAndDevel(
 			SmaphAnnotator bingAnnotator,
-			ExampleGatherer<EntityFeaturePack> trainEntityFilterGatherer,
-			ExampleGatherer<EntityFeaturePack> develEntityFilterGatherer,
-			ExampleGatherer<BindingFeaturePack> trainLinkBackGatherer,
-			ExampleGatherer<BindingFeaturePack> develLinkBackGatherer,
-			ExampleGatherer<AnnotationFeaturePack> trainAnnotationGatherer,
-			ExampleGatherer<AnnotationFeaturePack> develAnnotationGatherer,
+			ExampleGatherer<Tag> trainEntityFilterGatherer,
+			ExampleGatherer<Tag> develEntityFilterGatherer,
+			ExampleGatherer<HashSet<Annotation>> trainLinkBackGatherer,
+			ExampleGatherer<HashSet<Annotation>> develLinkBackGatherer,
+			ExampleGatherer<Annotation> trainAnnotationGatherer,
+			ExampleGatherer<Annotation> develAnnotationGatherer,
 			AnnotationRegressor ar, FeatureNormalizer annFn,
 			WikipediaApiInterface wikiApi, WikipediaToFreebase wikiToFreebase,
 			FreebaseApi freebApi, OptDataset opt) throws Exception {
@@ -232,10 +233,13 @@ public class GenerateTrainingAndTest {
 				"base", "COMMONNESS", "jaccard", "0.6", "0.0"/* minlp */, false,
 				false, false);
 
+				WATAnnotator watDefault = new WATAnnotator(
+						"wikisense.mkapp.it", 80, "base", "COMMONNESS", "mw", "0.2",
+						"0.0", false, false, false);
 		return new SmaphAnnotator(wikiSense,
 				new FrequencyBoldFilter((float)editDistanceSpotFilterThreshold),entityFilter
-				, efNorm, lb, true, true, true,
-				10, false, 0, false, 0, false, wikiApi, bingKey);
+				, efNorm, lb, false, true, true,
+				10, false, 0, false, 0, true, 25, watDefault, new FrequencyAnnotationFilter(0.03), wikiApi, bingKey);
 
 	}
 	public static SmaphAnnotator getDefaultBingAnnotatorGatherer(

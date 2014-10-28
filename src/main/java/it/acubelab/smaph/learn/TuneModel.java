@@ -16,6 +16,7 @@
 
 package it.acubelab.smaph.learn;
 
+import it.acubelab.batframework.data.Tag;
 import it.acubelab.batframework.metrics.Metrics;
 import it.acubelab.batframework.metrics.MetricsResultSet;
 import it.acubelab.batframework.utils.FreebaseApi;
@@ -131,8 +132,8 @@ public class TuneModel {
 					.getDefaultBingAnnotatorGatherer(wikiApi, 
 							boldFilterThr, bingKey);
 
-			ExampleGatherer<EntityFeaturePack> trainEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
-			ExampleGatherer<EntityFeaturePack> develEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
+			ExampleGatherer<Tag> trainEntityFilterGatherer = new ExampleGatherer<Tag>();
+			ExampleGatherer<Tag> develEntityFilterGatherer = new ExampleGatherer<Tag>();
 			
 			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 					bingAnnotator, trainEntityFilterGatherer,
@@ -172,8 +173,8 @@ public class TuneModel {
 	}
 
 	private static Pair<Vector<ModelConfigurationResult>, ModelConfigurationResult> trainIterative(
-			ExampleGatherer<EntityFeaturePack> trainGatherer,
-			ExampleGatherer<EntityFeaturePack> develGatherer, double boldFilterThreshold,
+			ExampleGatherer<Tag> trainGatherer,
+			ExampleGatherer<Tag> develGatherer, double boldFilterThreshold,
 			OptimizaionProfiles optProfile, double optProfileThreshold,
 			double gamma, double C) {
 
@@ -288,15 +289,15 @@ public class TuneModel {
 	public static class ParameterTester implements
 			Callable<ModelConfigurationResult> {
 		private double wPos, wNeg, editDistanceThreshold, gamma, C;
-		private ExampleGatherer<EntityFeaturePack> trainGatherer;
-		private ExampleGatherer<EntityFeaturePack> testGatherer;
+		private ExampleGatherer<Tag> trainGatherer;
+		private ExampleGatherer<Tag> testGatherer;
 		private int[] features;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public ParameterTester(double wPos, double wNeg,
 				double editDistanceThreshold, int[] features,
-				ExampleGatherer<EntityFeaturePack> trainEQFGatherer,
-				ExampleGatherer<EntityFeaturePack> testEQFGatherer,
+				ExampleGatherer<Tag> trainEQFGatherer,
+				ExampleGatherer<Tag> testEQFGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				double gamma, double C,
 				Vector<ModelConfigurationResult> scoreboard) {
@@ -380,8 +381,8 @@ public class TuneModel {
 	static class WeightSelector implements Callable<Pair<Double, Double>> {
 		private double wPosMin, wPosMax, wNegMin, wNegMax, gamma, C;
 		private double optProfileThreshold;
-		private ExampleGatherer<EntityFeaturePack> trainGatherer;
-		private ExampleGatherer<EntityFeaturePack> testGatherer;
+		private ExampleGatherer<Tag> trainGatherer;
+		private ExampleGatherer<Tag> testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double boldFilterThreshold;
 		private double kappaPos, kappaNeg;
@@ -393,8 +394,8 @@ public class TuneModel {
 				double wNegMin, double wNegMax, double kappaNeg, double gamma,
 				double C, int steps, double boldFilterThreshold,
 				int[] features,
-				ExampleGatherer<EntityFeaturePack> trainEQFGatherer,
-				ExampleGatherer<EntityFeaturePack> testEQFGatherer,
+				ExampleGatherer<Tag> trainEQFGatherer,
+				ExampleGatherer<Tag> testEQFGatherer,
 				OptimizaionProfiles optProfile,
 				Vector<ModelConfigurationResult> scoreboard) {
 			if (kappaNeg == -1)
@@ -486,16 +487,16 @@ public class TuneModel {
 	static class AblationFeatureSelector implements Runnable {
 		private double wPos, wNeg, gamma, C;
 		private double optProfileThreshold;
-		private ExampleGatherer<EntityFeaturePack> trainGatherer;
-		private ExampleGatherer<EntityFeaturePack> testGatherer;
+		private ExampleGatherer<Tag> trainGatherer;
+		private ExampleGatherer<Tag> testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public AblationFeatureSelector(double wPos, double wNeg, double gamma,
 				double C, double editDistanceThreshold,
-				ExampleGatherer<EntityFeaturePack> trainGatherer,
-				ExampleGatherer<EntityFeaturePack> testGatherer,
+				ExampleGatherer<Tag> trainGatherer,
+				ExampleGatherer<Tag> testGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wNeg = wNeg;
@@ -582,16 +583,16 @@ public class TuneModel {
 	static class IncrementalFeatureSelector implements Runnable {
 		private double wPos, wNeg, gamma, C;
 		private double optProfileThreshold;
-		private ExampleGatherer<EntityFeaturePack> trainGatherer;
-		private ExampleGatherer<EntityFeaturePack> testGatherer;
+		private ExampleGatherer<Tag> trainGatherer;
+		private ExampleGatherer<Tag> testGatherer;
 		private OptimizaionProfiles optProfile;
 		private double editDistanceThreshold;
 		Vector<ModelConfigurationResult> scoreboard;
 
 		public IncrementalFeatureSelector(double wPos, double wNeg,
 				double gamma, double C, double editDistanceThreshold,
-				ExampleGatherer<EntityFeaturePack> trainGatherer,
-				ExampleGatherer<EntityFeaturePack> testGatherer,
+				ExampleGatherer<Tag> trainGatherer,
+				ExampleGatherer<Tag> testGatherer,
 				OptimizaionProfiles optProfile, double optProfileThreshold,
 				Vector<ModelConfigurationResult> scoreboard) {
 			this.wNeg = wNeg;

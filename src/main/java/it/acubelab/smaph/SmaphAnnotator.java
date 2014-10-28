@@ -39,12 +39,14 @@ import it.acubelab.smaph.entityfilters.EntityFilter;
 import it.acubelab.smaph.learn.featurePacks.AnnotationFeaturePack;
 import it.acubelab.smaph.learn.featurePacks.BindingFeaturePack;
 import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
+import it.acubelab.smaph.learn.featurePacks.FeaturePack;
 import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
 import it.acubelab.smaph.linkback.LinkBack;
 import it.acubelab.smaph.linkback.SvmSingleAnnotationLinkBack;
 import it.acubelab.smaph.linkback.annotationRegressor.AnnotationRegressor;
 import it.acubelab.smaph.linkback.bindingGenerator.BindingGenerator;
 import it.acubelab.smaph.main.ERDDatasetFilter;
+import it.acubelab.smaph.snippetannotationfilters.SnippetAnnotationFilter;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 import java.io.File;
@@ -91,7 +93,8 @@ public class SmaphAnnotator implements Sa2WSystem {
 	private WikipediaApiInterface wikiApi;
 	private static WikipediaToFreebase wikiToFreebase = new WikipediaToFreebase("mapdb");;
 
-	private WATAnnotator auxDisambiguator;
+	private WATAnnotator boldDisambiguator;
+	private WATAnnotator snippetAnnotator;
 	private BoldFilter boldFilter;
 	private EntityFilter entityFilter;
 	private FeatureNormalizer entityFilterNormalizer;
@@ -99,6 +102,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	private boolean includeSourceNormalSearch;
 	private boolean includeSourceAnnotator;
 	private boolean includeSourceSnippets;
+	private int topKAnnotateSnippet;
 	private boolean includeSourceWikiSearch;
 	private int topKWikiSearch = 0;
 	private boolean includeSourceRelatedSearch;
@@ -106,6 +110,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	private SmaphAnnotatorDebugger debugger;
 	private boolean predictNEonly;
 	private String appendName = "";
+	private SnippetAnnotationFilter snippetAnnotationFilter;
 
 	/**
 	 * Constructs a SMAPH annotator.
@@ -140,9 +145,11 @@ public class SmaphAnnotator implements Sa2WSystem {
 			boolean includeSourceAnnotator, boolean includeSourceNormalSearch,
 			boolean includeSourceWikiSearch, int wikiSearchPages,
 			boolean includeSourceAnnotatorTopK, int topKAnnotatorCandidates,
-			boolean includeRelatedSearch, int topKRelatedSearch, boolean includeSourceSnippets,
+			boolean includeRelatedSearch, int topKRelatedSearch,
+			boolean includeSourceSnippets, int topKAnnotateSnippet, WATAnnotator snippetAnnotator,
+			SnippetAnnotationFilter snippetAnnotationFilter,
 			WikipediaApiInterface wikiApi, String bingKey) {
-		this.auxDisambiguator = auxDisambiguator;
+		this.boldDisambiguator = auxDisambiguator;
 		this.boldFilter = boldFilter;
 		this.entityFilter = entityFilter;
 		this.entityFilterNormalizer = entityFilterNormalizer;
@@ -156,6 +163,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 		this.topKRelatedSearch = topKRelatedSearch;
 		this.bingKey = bingKey;
 		this.includeSourceSnippets = includeSourceSnippets;
+		this.snippetAnnotationFilter = snippetAnnotationFilter;
+		this.topKAnnotateSnippet = topKAnnotateSnippet;
+		this.snippetAnnotator = snippetAnnotator;
 	}
 	
 	public void setPredictNEOnly(boolean predictNEonly) {
@@ -254,7 +264,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			XPathExpressionException, ParserConfigurationException,
 			SAXException {
 		HashSet<Annotation> anns;
-		anns = auxDisambiguator.solveD2W(text, mentions);
+		anns = boldDisambiguator.solveD2W(text, mentions);
 		if (anns == null)
 			return new Pair<HashMap<Mention, HashMap<String, Double>>, HashMap<String, Tag>>(
 					new HashMap<Mention, HashMap<String, Double>>(),
@@ -265,7 +275,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			widsToPrefetch.add(ann.getConcept());
 		wikiApi.prefetchWids(widsToPrefetch);
 
-		HashMap<Mention, List<HashMap<String, Double>>> additionalCandidatesInfo = auxDisambiguator
+		HashMap<Mention, List<HashMap<String, Double>>> additionalCandidatesInfo = boldDisambiguator
 				.getLastQueryAdditionalCandidatesInfo();
 		for (Mention mention : additionalCandidatesInfo.keySet())
 			additionalCandidatesInfo.put(mention,
@@ -278,7 +288,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 							ann.getPosition() + ann.getLength()),
 					new Tag(ann.getConcept()));
 		return new Pair<HashMap<Mention, HashMap<String, Double>>, HashMap<String, Tag>>(
-				auxDisambiguator.getLastQueryAdditionalInfo(), boldToEntity);
+				boldDisambiguator.getLastQueryAdditionalInfo(), boldToEntity);
 	}
 
 	@Override
@@ -767,7 +777,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		HashMap<String, Double> result = new HashMap<>();
 
 		try {
-			result.put("is_named_entity", ERDDatasetFilter.EntityIsNE(wikiApi,
+			result.put("s1_is_named_entity", ERDDatasetFilter.EntityIsNE(wikiApi,
 									wikiToFreebase, wid)? 1.0:0.0);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -821,10 +831,10 @@ public class SmaphAnnotator implements Sa2WSystem {
 			String query, int wid, int rank, double webTotal,
 			double wikiWebTotal, List<Pair<String, Integer>> bingBoldsWS,
 			int source) {
-
+		String sourceName = "s" + source;
 		HashMap<String, Double> result = new HashMap<>();
 		try {
-			result.put("is_named_entity", ERDDatasetFilter.EntityIsNE(wikiApi,
+			result.put(sourceName + "_is_named_entity", ERDDatasetFilter.EntityIsNE(wikiApi,
 									wikiToFreebase, wid)? 1.0:0.0);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -836,7 +846,6 @@ public class SmaphAnnotator implements Sa2WSystem {
 		result.put("is_s4", 0.0);
 		result.put("is_s5", 0.0);
 		result.put("is_s6", 0.0);
-		String sourceName = "s" + source;
 		result.put("is_" + sourceName, 1.0);
 		result.put(sourceName + "_rank", (double) rank);
 		result.put(sourceName + "_webTotal", (double) webTotal);
@@ -877,7 +886,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 	}
 
 	private HashMap<String, Double> generateEntityFeaturesSnippet(String query,
-			double webTotal, int resultsCount, List<String> mentions,
+			double webTotal, int resultsCount, List<String> mentions, List<String> bolds,
 			List<Integer> ranks, List<HashMap<String, Double>> additionalInfos,
 			int wid) {
 		HashMap<String, Double> result = new HashMap<>();
@@ -893,19 +902,73 @@ public class SmaphAnnotator implements Sa2WSystem {
 		result.put("s6_avgRank",
 				RankWeightBoldFilter.computeAvgRank(ranks, resultsCount));
 
-		double minED = Double.POSITIVE_INFINITY;
-		for (String mention : mentions)
-			minED = Math.min(minED, SmaphUtils.getMinEditDist(query, mention));
-		result.put("s6_editDistanceMention", minED);
+		result.put("s6_pageRank", additionalInfos.get(0).get("pageRank"));
 
 		try {
-			result.put("is_named_entity", ERDDatasetFilter.EntityIsNE(wikiApi,
+			result.put("s6_is_named_entity", ERDDatasetFilter.EntityIsNE(wikiApi,
 					wikiToFreebase, wid) ? 1.0 : 0.0);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		// TODO: use additionalInfos
-
+		
+		List<Double> rhoes = new Vector<>();
+		List<Double> lps = new Vector<>();
+		List<Double> commonness = new Vector<>();
+		List<Double> ambiguities = new Vector<>();
+		for (HashMap<String, Double> addInfo : additionalInfos){
+			rhoes.add(addInfo.get("rho"));
+			lps.add(addInfo.get("lp"));
+			commonness.add(addInfo.get("commonness"));
+			ambiguities.add(addInfo.get("ambiguity"));
+		}
+		List<Double> boldEDs = new Vector<>();
+		for (String bold : bolds)
+			boldEDs.add(SmaphUtils.getMinEditDist(query, bold));
+		List<Double> mentionEDs = new Vector<>();
+		for (String mention : mentions)
+			mentionEDs.add(SmaphUtils.getMinEditDist(query, mention));
+		List<Double> mentionBoldOverlap = new Vector<>();
+		for (int i = 0; i < mentions.size(); i++) {
+			List<String> boldTokens = SmaphUtils.tokenize(bolds.get(i));
+			List<String> mentionTokens = SmaphUtils.tokenize(mentions.get(i));
+			int overlap = 0;
+			for (String boldToken : boldTokens)
+				if (mentionTokens.contains(boldToken))
+					overlap++;
+			mentionBoldOverlap.add(((double) overlap)
+					/ ((double) boldTokens.size() + mentionTokens.size()));
+		}		
+			
+		Triple<Double, Double, Double> minMaxAvgRho = SmaphUtils.getMinMaxAvg(rhoes);
+		result.put("s6_min_rho", minMaxAvgRho.getLeft());
+		result.put("s6_max_rho", minMaxAvgRho.getMiddle());
+		result.put("s6_avg_rho", minMaxAvgRho.getRight());
+		Triple<Double, Double, Double> minMaxAvgLp = SmaphUtils.getMinMaxAvg(lps);
+		result.put("s6_min_lp", minMaxAvgLp.getLeft());
+		result.put("s6_max_lp", minMaxAvgLp.getMiddle());
+		result.put("s6_avg_lp", minMaxAvgLp.getRight());
+		Triple<Double, Double, Double> minMaxAvgComm = SmaphUtils.getMinMaxAvg(commonness);
+		result.put("s6_min_commonness", minMaxAvgComm.getLeft());
+		result.put("s6_max_commonness", minMaxAvgComm.getMiddle());
+		result.put("s6_avg_commonness", minMaxAvgComm.getRight());
+		Triple<Double, Double, Double> minMaxAvgAmbig = SmaphUtils.getMinMaxAvg(ambiguities);
+		result.put("s6_min_ambig", minMaxAvgAmbig.getLeft());
+		result.put("s6_max_ambig", minMaxAvgAmbig.getMiddle());
+		result.put("s6_avg_ambig", minMaxAvgAmbig.getRight());
+		Triple<Double, Double, Double> minMaxAvgBoldED = SmaphUtils.getMinMaxAvg(boldEDs);
+		result.put("s6_min_min_bold_ed", minMaxAvgBoldED.getLeft());
+		result.put("s6_max_min_bold_ed", minMaxAvgBoldED.getMiddle());
+		result.put("s6_avg_min_bold_ed", minMaxAvgBoldED.getRight());
+		Triple<Double, Double, Double> minMaxAvgMentionED = SmaphUtils.getMinMaxAvg(mentionEDs);
+		result.put("s6_min_min_mention_ed", minMaxAvgMentionED.getLeft());
+		result.put("s6_max_min_mention_ed", minMaxAvgMentionED.getMiddle());
+		result.put("s6_avg_min_mention_ed", minMaxAvgMentionED.getRight());
+		Triple<Double, Double, Double> minMaxAvgMentionBoldOverlap = SmaphUtils.getMinMaxAvg(mentionBoldOverlap);
+		result.put("s6_min_mention_bold_overlap", minMaxAvgMentionBoldOverlap.getLeft());
+		result.put("s6_max_mention_bold_overlap", minMaxAvgMentionBoldOverlap.getMiddle());
+		result.put("s6_avg_mention_bold_overlap", minMaxAvgMentionBoldOverlap.getRight());
+		
+		
 		return result;
 	}
 
@@ -1012,10 +1075,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 		/** Annotate bolds on the annotator */
 		HashMap<String, Tag> boldToEntity = null;
 		HashMap<Mention, HashMap<String, Double>> additionalInfo = null;
-		Pair<String, HashSet<Mention>> annInput = null;
 		HashMap<String, Mention> boldToMention = null;
 		if (includeSourceAnnotator) {
-			annInput = concatenateBolds(filteredBolds);
+			Pair<String, HashSet<Mention>> annInput = concatenateBolds(filteredBolds);
 			boldToMention = getBoldToMention(annInput.first, annInput.second);
 			Pair<HashMap<Mention, HashMap<String, Double>>, HashMap<String, Tag>> infoAndAnnotations = disambiguateBolds(
 					annInput.first, annInput.second);
@@ -1029,13 +1091,17 @@ public class SmaphAnnotator implements Sa2WSystem {
 		/** Annotate snippets */
 		HashMap<Tag,List<Integer>> tagToRanks = null;
 		HashMap<Tag,List<String>> tagToMentions = null;
+		HashMap<Tag,List<String>> tagToBolds = null;
 		HashMap<Tag,List<HashMap<String,Double>>> tagToAdditionalInfos = null;
+		HashSet<Tag> filteredAnnotations = null;
 		if (includeSourceSnippets){
 			List<List<Pair<ScoredAnnotation, HashMap<String, Double>>>> snippetAnnotations = new Vector<>();
-			annotateSnippets(snippetsToBolds, snippetAnnotations);
+			tagToBolds = new HashMap<>();
+			annotateSnippets(snippetsToBolds, snippetAnnotations, tagToBolds);
 			tagToRanks = getSnippetAnnotationRanks(snippetAnnotations);
 			tagToMentions = getSnippetMentions(snippetAnnotations, snippetsToBolds);
 			tagToAdditionalInfos = getSnippetAdditionalInfo(snippetAnnotations);
+			filteredAnnotations = snippetAnnotationFilter.filterAnnotations(tagToRanks, resultsCount);
 		}
 
 		HashMap<Tag, List<HashMap<String, Double>>> entityToFtrVects = new HashMap<>();
@@ -1110,10 +1176,10 @@ public class SmaphAnnotator implements Sa2WSystem {
 		
 		//Generate features for entities found by the Snippet annotation
 		if (includeSourceSnippets) {
-			for (Tag entity : tagToMentions.keySet()) {
+			for (Tag entity : filteredAnnotations) {
 				HashMap<String, Double> ESFeatures = generateEntityFeaturesSnippet(
 						query, webTotalNS, resultsCount,
-						tagToMentions.get(entity), tagToRanks.get(entity),
+						tagToMentions.get(entity), tagToBolds.get(entity), tagToRanks.get(entity),
 						tagToAdditionalInfos.get(entity), entity.getConcept());
 				if (!entityToFtrVects.containsKey(entity))
 					entityToFtrVects.put(entity,
@@ -1128,7 +1194,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 		qi.entityToBoldS2S3 = entityToBoldsS2S3;
 		return qi;
 	}
-
+	
 	private HashMap<Tag, List<HashMap<String, Double>>> getSnippetAdditionalInfo(
 			List<List<Pair<ScoredAnnotation, HashMap<String, Double>>>> snippetsAnnotations) {
 		HashMap<Tag, List<HashMap<String, Double>>> res = new HashMap<>();
@@ -1190,9 +1256,10 @@ public class SmaphAnnotator implements Sa2WSystem {
 
 	private void annotateSnippets(
 			List<Pair<String, Vector<Pair<Integer, Integer>>>> snippetsToBolds,
-			List<List<Pair<ScoredAnnotation, HashMap<String, Double>>>> snippetAnnotations) {
+			List<List<Pair<ScoredAnnotation, HashMap<String, Double>>>> snippetAnnotations,
+			HashMap<Tag, List<String>> tagToBolds) {
 
-		for (Pair<String, Vector<Pair<Integer, Integer>>> snippetAndBolds : snippetsToBolds) {
+		for (Pair<String, Vector<Pair<Integer, Integer>>> snippetAndBolds : snippetsToBolds.subList(0, Math.min(snippetsToBolds.size(),topKAnnotateSnippet))) {
 			List<Pair<ScoredAnnotation, HashMap<String, Double>>> resI = new Vector<>();
 			snippetAnnotations.add(resI);
 			String snippet = snippetAndBolds.first;
@@ -1201,18 +1268,25 @@ public class SmaphAnnotator implements Sa2WSystem {
 			for (Pair<Integer, Integer> bold : bolds)
 				boldMentions.add(new Mention(bold.first, bold.second));
 
-			HashSet<ScoredAnnotation> annotations = auxDisambiguator
+			HashSet<ScoredAnnotation> annotations = snippetAnnotator
 					.solveSa2W(snippet);
-			HashMap<Mention, HashMap<String, Double>> addInfo = auxDisambiguator
+			HashMap<Mention, HashMap<String, Double>> addInfo = snippetAnnotator
 					.getLastQueryAdditionalInfo();
 
 			for (ScoredAnnotation a : annotations)
 				for (Mention m : boldMentions)
+					//if (a.getPosition() <= m.getPosition() && m.getPosition()+m.getLength() <= a.getPosition() + a.getLength()) {
 					if (a.overlaps(m)) {
-						resI.add(new Pair<>(a, addInfo.get(m)));
+						resI.add(new Pair<>(a, addInfo.get(new Mention(a.getPosition(), a.getLength()))));
+						Tag t = new Tag(a.getConcept());
+						if (!tagToBolds.containsKey(t))
+							tagToBolds.put(t, new Vector<String>());
+						String bold = snippet.substring(m.getPosition(), m.getPosition()+m.getLength());
+						tagToBolds.get(t).add(bold);
 						break;
 					}
 		}
+		return;
 	}
 
 	/**
@@ -1240,9 +1314,9 @@ public class SmaphAnnotator implements Sa2WSystem {
 			String query,
 			HashSet<Tag> goldStandard,
 			HashSet<Annotation> goldStandardAnn,
-			List<Pair<EntityFeaturePack, Boolean>> EFVectorsToPresence,
-			List<Pair<BindingFeaturePack, Double>> lbVectorsToF1,
-			List<Pair<AnnotationFeaturePack, Boolean>> annVectorsToPresence,
+			List<Pair<FeaturePack<Tag>, Boolean>> EFVectorsToPresence,
+			List<Pair<FeaturePack<HashSet<Annotation>>, Double>> lbVectorsToF1,
+			List<Pair<FeaturePack<Annotation>, Boolean>> annVectorsToPresence,
 			boolean keepNEOnly,
 			BindingGenerator bg,
 			AnnotationRegressor ar,
@@ -1262,7 +1336,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 							&& !ERDDatasetFilter.EntityIsNE(wikiApi,
 									wikiToFreeb, tag.getConcept()))
 						continue;
-					EFVectorsToPresence.add(new Pair<EntityFeaturePack, Boolean>(new EntityFeaturePack(ftrs), goldStandard.contains(tag)));
+					EFVectorsToPresence.add(new Pair<FeaturePack<Tag>, Boolean>(new EntityFeaturePack(ftrs), goldStandard.contains(tag)));
 					System.out.printf("%d in query [%s] is a %s example.%n",
 							tag.getConcept(), query,
 							goldStandard.contains(tag) ? "positive"
@@ -1280,7 +1354,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 				double f1 = bindingAndFtrsAndF1.getRight();
 				HashSet<Annotation> binding = bindingAndFtrsAndF1.getLeft();
 				// if (f1 != 0.0 || binding.isEmpty()) {//TODO
-				lbVectorsToF1.add(new Pair<BindingFeaturePack, Double>(features, f1));
+				lbVectorsToF1.add(new Pair<FeaturePack<HashSet<Annotation>>, Double>(features, f1));
 			}
 		}
 
@@ -1292,7 +1366,7 @@ public class SmaphAnnotator implements Sa2WSystem {
 			for (Triple<Annotation, AnnotationFeaturePack, Boolean> annotationsAndFtrAndPresence : annotationsAndFtrAndPresences) {
 				AnnotationFeaturePack features = annotationsAndFtrAndPresence.getMiddle();
 				Annotation ann = annotationsAndFtrAndPresence.getLeft();
-				annVectorsToPresence.add(new Pair<AnnotationFeaturePack, Boolean>(features,
+				annVectorsToPresence.add(new Pair<FeaturePack<Annotation>, Boolean>(features,
 						annotationsAndFtrAndPresence.getRight()));
 				System.out.printf("[%s]->%d in query [%s] is a %s example.%n",
 						query.substring(ann.getPosition(), ann.getPosition()

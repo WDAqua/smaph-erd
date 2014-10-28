@@ -16,41 +16,45 @@
 
 	package it.acubelab.smaph.learn;
 
-	import it.acubelab.batframework.metrics.MetricsResultSet;
-	import it.acubelab.batframework.systemPlugins.WATAnnotator;
-	import it.acubelab.batframework.utils.FreebaseApi;
-	import it.acubelab.batframework.utils.WikipediaApiInterface;
-	import it.acubelab.smaph.SmaphAnnotator;
-	import it.acubelab.smaph.SmaphConfig;
-	import it.acubelab.smaph.SmaphUtils;
-	import it.acubelab.smaph.learn.GenerateTrainingAndTest.OptDataset;
-	import it.acubelab.smaph.learn.featurePacks.AnnotationFeaturePack;
-	import it.acubelab.smaph.learn.featurePacks.BindingFeaturePack;
-	import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
-	import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
-	import it.acubelab.smaph.learn.normalizer.NoFeatureNormalizer;
-	import it.acubelab.smaph.learn.normalizer.ScaleFeatureNormalizer;
-	import it.acubelab.smaph.learn.normalizer.ZScoreFeatureNormalizer;
-	import it.acubelab.smaph.linkback.annotationRegressor.AnnotationRegressor;
-	import it.acubelab.smaph.linkback.annotationRegressor.LibLinearAnnotationRegressor;
-	import it.cnr.isti.hpc.erd.WikipediaToFreebase;
+	import it.acubelab.batframework.data.Annotation;
+import it.acubelab.batframework.data.Tag;
+import it.acubelab.batframework.metrics.MetricsResultSet;
+import it.acubelab.batframework.systemPlugins.WATAnnotator;
+import it.acubelab.batframework.utils.FreebaseApi;
+import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.acubelab.smaph.SmaphAnnotator;
+import it.acubelab.smaph.SmaphConfig;
+import it.acubelab.smaph.SmaphUtils;
+import it.acubelab.smaph.learn.GenerateTrainingAndTest.OptDataset;
+import it.acubelab.smaph.learn.featurePacks.AnnotationFeaturePack;
+import it.acubelab.smaph.learn.featurePacks.BindingFeaturePack;
+import it.acubelab.smaph.learn.featurePacks.EntityFeaturePack;
+import it.acubelab.smaph.learn.featurePacks.FeaturePack;
+import it.acubelab.smaph.learn.normalizer.FeatureNormalizer;
+import it.acubelab.smaph.learn.normalizer.NoFeatureNormalizer;
+import it.acubelab.smaph.learn.normalizer.ScaleFeatureNormalizer;
+import it.acubelab.smaph.learn.normalizer.ZScoreFeatureNormalizer;
+import it.acubelab.smaph.linkback.annotationRegressor.AnnotationRegressor;
+import it.acubelab.smaph.linkback.annotationRegressor.LibLinearAnnotationRegressor;
+import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 
 	import java.util.Arrays;
-	import java.util.Collections;
-	import java.util.List;
-	import java.util.Locale;
-	import java.util.Vector;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Vector;
 
 	import libsvm.svm;
-	import libsvm.svm_model;
-	import libsvm.svm_node;
-	import libsvm.svm_parameter;
-	import libsvm.svm_problem;
+import libsvm.svm_model;
+import libsvm.svm_node;
+import libsvm.svm_parameter;
+import libsvm.svm_problem;
 
 	public class GenerateModel {
 		public static void main(String[] args) throws Exception {
 			Locale.setDefault(Locale.US);
-			generateEFModel(OptDataset.ERD_CHALLENGE);
+			generateEFModel(OptDataset.SMAPH_DATASET);
 			//generateAnnotationModel();
 			//generateLBModel();
 			WATAnnotator.flush();
@@ -79,8 +83,8 @@
 								boldFilterThr, bingKey);
 				WATAnnotator.setCache("wikisense.cache");
 
-				ExampleGatherer<AnnotationFeaturePack> trainAnnotationGatherer = new ExampleGatherer<AnnotationFeaturePack>();
-				ExampleGatherer<AnnotationFeaturePack> develAnnotationGatherer = new ExampleGatherer<AnnotationFeaturePack>();
+				ExampleGatherer<Annotation> trainAnnotationGatherer = new ExampleGatherer<Annotation>();
+				ExampleGatherer<Annotation> develAnnotationGatherer = new ExampleGatherer<Annotation>();
 				GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 						bingAnnotator, null, null, null,
 						null, trainAnnotationGatherer, develAnnotationGatherer,null,null,  wikiApi, wikiToFreebase, freebApi, opt);
@@ -135,8 +139,8 @@
 								boldFilterThr, bingKey);
 				WATAnnotator.setCache("wikisense.cache");
 
-				ExampleGatherer<BindingFeaturePack> trainLinkBackGatherer = new ExampleGatherer<BindingFeaturePack>();
-				ExampleGatherer<BindingFeaturePack> develLinkBackGatherer = new ExampleGatherer<BindingFeaturePack>();
+				ExampleGatherer<HashSet<Annotation>> trainLinkBackGatherer = new ExampleGatherer<HashSet<Annotation>>();
+				ExampleGatherer<HashSet<Annotation>> develLinkBackGatherer = new ExampleGatherer<HashSet<Annotation>>();
 				GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 						bingAnnotator, null, null, trainLinkBackGatherer,
 						develLinkBackGatherer, null, null, ar, annFn, wikiApi, wikiToFreebase, freebApi, opt);
@@ -255,11 +259,17 @@
 
 			};
 			weightsToTest = new double[][] {
+					{2.88435, 1.2},
+					{2.88435, 1.4},
+					{2.88435, 1.6},
+					{2.88435, 1.8},
 					{2.88435, 2.0},
+					{2.88435, 2.2},
 			};
 			featuresSetsToTest = new int[][] {
 					//{7,8,9,10,11,12,13,15,17,20,21,23,24,25,33,34,35,37},
-					{ 1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37,38 },
+					//{ 1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37,38,39,40,41 },
+					{ 2, 3, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 33, 34, 35, 36, 37,39,40,41,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66},
 					
 			};
 					
@@ -274,8 +284,8 @@
 							boldFilterThr, bingKey);
 			WATAnnotator.setCache("wikisense.cache");
 
-			ExampleGatherer<EntityFeaturePack> trainEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
-			ExampleGatherer<EntityFeaturePack> develEntityFilterGatherer = new ExampleGatherer<EntityFeaturePack>();
+			ExampleGatherer<Tag> trainEntityFilterGatherer = new ExampleGatherer<Tag>();
+			ExampleGatherer<Tag> develEntityFilterGatherer = new ExampleGatherer<Tag>();
 			GenerateTrainingAndTest.gatherExamplesTrainingAndDevel(
 					bingAnnotator, trainEntityFilterGatherer,
 					develEntityFilterGatherer, null, null, null, null,null, null, wikiApi,
@@ -293,8 +303,8 @@
 					double C = paramsToTestArray[1];
 					for (double[] weightsPosNeg : weightsToTest) {
 						double wPos = weightsPosNeg[0], wNeg = weightsPosNeg[1];
-						ExampleGatherer<EntityFeaturePack> trainGatherer = trainEntityFilterGatherer;
-						ExampleGatherer<EntityFeaturePack> develGatherer = develEntityFilterGatherer;
+						ExampleGatherer<Tag> trainGatherer = trainEntityFilterGatherer;
+						ExampleGatherer<Tag> develGatherer = develEntityFilterGatherer;
 						String fileBase = getModelFileNameBaseEF(
 								ftrToTestArray, wPos, wNeg,
 								boldFilterThr, gamma, C) + filePrefix;

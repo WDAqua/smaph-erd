@@ -324,7 +324,24 @@ public class WATAnnotator implements Sa2WSystem, MentionSpotter,
 				int start = js_ann.getInt("start");
 				int end = js_ann.getInt("end");
 				int id = js_ann.getInt("id");
+				double lp = js_ann.getDouble("linkProb");
+				double commonness = js_ann.getDouble("commonness");
 				double rho = js_ann.getDouble("rho");
+				double ambiguity = 1.0 / (1.0 + js_ann.getInt("ambiguity"));
+				double localCoherence = js_ann.getDouble("localCoherence");
+				double pageRank = js_ann.getDouble("pageRank");
+				// System.out.println(text.substring(start, end) + "->" + id);
+
+				Mention m = new Mention(start, end - start);
+				if (!additionalInfo.containsKey(m))
+					additionalInfo.put(m, new HashMap<String, Double>());
+				additionalInfo.get(m).put("lp", lp);
+				additionalInfo.get(m).put("commonness", commonness);
+				additionalInfo.get(m).put("ambiguity", ambiguity);
+				additionalInfo.get(m).put("localCoherence", localCoherence);
+				additionalInfo.get(m).put("rho", rho);
+				additionalInfo.get(m).put("pageRank", pageRank);
+
 				// System.out.println(text.substring(start, end) + "->" + id +
 				// " ("
 				// + rho + ")");
