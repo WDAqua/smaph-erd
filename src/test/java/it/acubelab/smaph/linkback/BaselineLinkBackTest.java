@@ -1,8 +1,8 @@
 package it.acubelab.smaph.linkback;
 
 import static org.junit.Assert.*;
-import it.acubelab.batframework.data.ScoredAnnotation;
-import it.acubelab.batframework.data.Tag;
+import it.unipi.di.acube.batframework.data.ScoredAnnotation;
+import it.unipi.di.acube.batframework.data.Tag;
 
 import java.util.Collections;
 import java.util.HashMap;

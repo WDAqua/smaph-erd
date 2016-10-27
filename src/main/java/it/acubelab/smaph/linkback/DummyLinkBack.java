@@ -1,6 +1,6 @@
 package it.acubelab.smaph.linkback;
 
-import it.acubelab.batframework.data.*;
+import it.unipi.di.acube.batframework.data.*;
 
 import java.util.*;
 

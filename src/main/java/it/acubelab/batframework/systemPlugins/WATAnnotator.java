@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package it.acubelab.batframework.systemPlugins;
+package it.unipi.di.acube.batframework.systemPlugins;
 
 import java.io.*;
 import java.net.*;
@@ -24,17 +24,17 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import it.acubelab.batframework.data.Annotation;
-import it.acubelab.batframework.data.Mention;
-import it.acubelab.batframework.data.MultipleAnnotation;
-import it.acubelab.batframework.data.ScoredAnnotation;
-import it.acubelab.batframework.data.ScoredTag;
-import it.acubelab.batframework.data.Tag;
-import it.acubelab.batframework.problems.CandidatesSpotter;
-import it.acubelab.batframework.problems.MentionSpotter;
-import it.acubelab.batframework.problems.Sa2WSystem;
-import it.acubelab.batframework.utils.AnnotationException;
-import it.acubelab.batframework.utils.ProblemReduction;
+import it.unipi.di.acube.batframework.data.Annotation;
+import it.unipi.di.acube.batframework.data.Mention;
+import it.unipi.di.acube.batframework.data.MultipleAnnotation;
+import it.unipi.di.acube.batframework.data.ScoredAnnotation;
+import it.unipi.di.acube.batframework.data.ScoredTag;
+import it.unipi.di.acube.batframework.data.Tag;
+import it.unipi.di.acube.batframework.problems.CandidatesSpotter;
+import it.unipi.di.acube.batframework.problems.MentionSpotter;
+import it.unipi.di.acube.batframework.problems.Sa2WSystem;
+import it.unipi.di.acube.batframework.utils.AnnotationException;
+import it.unipi.di.acube.batframework.utils.ProblemReduction;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphUtils;
 

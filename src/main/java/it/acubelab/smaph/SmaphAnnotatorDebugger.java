@@ -1,8 +1,8 @@
 package it.acubelab.smaph;
 
-import it.acubelab.batframework.data.Annotation;
-import it.acubelab.batframework.utils.Pair;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.data.Annotation;
+import it.unipi.di.acube.batframework.utils.Pair;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
 
 import java.io.IOException;

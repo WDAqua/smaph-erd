@@ -19,7 +19,7 @@ package it.acubelab.smaph;
 import java.util.HashSet;
 import java.util.List;
 
-import it.acubelab.batframework.metrics.MatchRelation;
+import it.unipi.di.acube.batframework.metrics.MatchRelation;
 
 public class IndexMatch implements MatchRelation<Integer> {
 

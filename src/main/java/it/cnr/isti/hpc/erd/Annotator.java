@@ -22,12 +22,12 @@ import it.acubelab.smaph.entityfilters.*;
 import it.acubelab.smaph.learn.GenerateModel;
 import it.acubelab.smaph.linkback.BaselineLinkBack;
 import it.acubelab.smaph.linkback.DummyLinkBack;
-import it.acubelab.batframework.problems.CandidatesSpotter;
-import it.acubelab.batframework.problems.Sa2WSystem;
-import it.acubelab.batframework.systemPlugins.TagmeAnnotator;
-import it.acubelab.batframework.systemPlugins.WATAnnotator;
-import it.acubelab.batframework.utils.*;
-import it.acubelab.batframework.data.MultipleAnnotation;
+import it.unipi.di.acube.batframework.problems.CandidatesSpotter;
+import it.unipi.di.acube.batframework.problems.Sa2WSystem;
+import it.unipi.di.acube.batframework.systemPlugins.TagmeAnnotator;
+import it.unipi.di.acube.batframework.systemPlugins.WATAnnotator;
+import it.unipi.di.acube.batframework.utils.*;
+import it.unipi.di.acube.batframework.data.MultipleAnnotation;
 
 import java.io.*;
 import java.util.*;
@@ -116,12 +116,12 @@ public class Annotator {
 	public List<Annotation> annotatePure(String query, String textID,
 			Sa2WSystem annotator) {
 		List<Annotation> annotations = new ArrayList<Annotation>();
-		HashSet<it.acubelab.batframework.data.ScoredAnnotation> res = annotator
+		HashSet<it.unipi.di.acube.batframework.data.ScoredAnnotation> res = annotator
 				.solveSa2W(query);
 		System.out.printf(annotator.getName() + " found %d annotations.%n",
 				res.size());
 		HashMap<Annotation, String> annToTitle = new HashMap<>();
-		for (it.acubelab.batframework.data.ScoredAnnotation ann : res) {
+		for (it.unipi.di.acube.batframework.data.ScoredAnnotation ann : res) {
 			Annotation a = new Annotation();
 			a.setQid(textID);
 			a.setInterpretationSet(0);

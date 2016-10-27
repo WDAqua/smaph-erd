@@ -16,7 +16,7 @@
 
 package it.acubelab.smaph.boldfilters;
 
-import it.acubelab.batframework.utils.Pair;
+import it.unipi.di.acube.batframework.utils.Pair;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphUtils;
 

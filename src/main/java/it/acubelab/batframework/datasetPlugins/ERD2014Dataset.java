@@ -14,18 +14,18 @@
  *  limitations under the License.
  */
 
-package it.acubelab.batframework.datasetPlugins;
+package it.unipi.di.acube.batframework.datasetPlugins;
 
 import java.io.*;
 import java.util.*;
 
-import it.acubelab.batframework.data.Annotation;
-import it.acubelab.batframework.data.Mention;
-import it.acubelab.batframework.data.Tag;
-import it.acubelab.batframework.problems.A2WDataset;
-import it.acubelab.batframework.utils.FreebaseApi;
-import it.acubelab.batframework.utils.ProblemReduction;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.data.Annotation;
+import it.unipi.di.acube.batframework.data.Mention;
+import it.unipi.di.acube.batframework.data.Tag;
+import it.unipi.di.acube.batframework.problems.A2WDataset;
+import it.unipi.di.acube.batframework.utils.FreebaseApi;
+import it.unipi.di.acube.batframework.utils.ProblemReduction;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 
 public class ERD2014Dataset implements A2WDataset {
 	List<String> queries = new Vector<>();
@@ -57,7 +57,12 @@ public class ERD2014Dataset implements A2WDataset {
 			int position = query.indexOf(tokens[3]);
 			int length =  tokens[3].length();
 			String freeBaseMID = tokens[2];
-			String title = freebApi.midToTitle(freeBaseMID);
+			String title = null;
+			try {
+				title = freebApi.midToTitle(freeBaseMID);
+			} catch (Exception e) {
+				e.printStackTrace();
+			};
 			if (title != null)
 				annotations.get(index).add(new Annotation(position, length, wikiApi.getIdByTitle(title)));
 		}

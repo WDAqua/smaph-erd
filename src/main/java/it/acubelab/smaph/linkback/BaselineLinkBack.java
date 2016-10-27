@@ -1,7 +1,7 @@
 package it.acubelab.smaph.linkback;
 
-import it.acubelab.batframework.data.*;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.data.*;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphUtils;
 
 import java.io.IOException;

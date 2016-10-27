@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package it.acubelab.batframework.systemPlugins;
+package it.unipi.di.acube.batframework.systemPlugins;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -30,11 +30,11 @@ import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.StringBody;
 
-import it.acubelab.batframework.data.Tag;
-import it.acubelab.batframework.problems.C2WSystem;
-import it.acubelab.batframework.utils.AnnotationException;
-import it.acubelab.batframework.utils.FreebaseApi;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.data.Tag;
+import it.unipi.di.acube.batframework.problems.C2WSystem;
+import it.unipi.di.acube.batframework.utils.AnnotationException;
+import it.unipi.di.acube.batframework.utils.FreebaseApi;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 
 /**
  * An interface to a generic ERD System, as defined in <a

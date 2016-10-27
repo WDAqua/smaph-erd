@@ -16,9 +16,9 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.batframework.metrics.*;
-import it.acubelab.batframework.utils.*;
-import it.acubelab.batframework.utils.Pair;
+import it.unipi.di.acube.batframework.metrics.*;
+import it.unipi.di.acube.batframework.utils.*;
+import it.unipi.di.acube.batframework.utils.Pair;
 import it.acubelab.smaph.*;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 

@@ -16,10 +16,10 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.batframework.metrics.MetricsResultSet;
-import it.acubelab.batframework.systemPlugins.WATAnnotator;
-import it.acubelab.batframework.utils.FreebaseApi;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.metrics.MetricsResultSet;
+import it.unipi.di.acube.batframework.systemPlugins.WATAnnotator;
+import it.unipi.di.acube.batframework.utils.FreebaseApi;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.acubelab.smaph.SmaphConfig;

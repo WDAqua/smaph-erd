@@ -16,7 +16,7 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.batframework.utils.Pair;
+import it.unipi.di.acube.batframework.utils.Pair;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

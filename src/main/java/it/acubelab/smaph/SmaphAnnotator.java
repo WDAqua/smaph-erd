@@ -16,10 +16,10 @@
 
 package it.acubelab.smaph;
 
-import it.acubelab.batframework.data.*;
-import it.acubelab.batframework.problems.Sa2WSystem;
-import it.acubelab.batframework.systemPlugins.WATAnnotator;
-import it.acubelab.batframework.utils.*;
+import it.unipi.di.acube.batframework.data.*;
+import it.unipi.di.acube.batframework.problems.Sa2WSystem;
+import it.unipi.di.acube.batframework.systemPlugins.WATAnnotator;
+import it.unipi.di.acube.batframework.utils.*;
 import it.acubelab.smaph.boldfilters.*;
 import it.acubelab.smaph.entityfilters.*;
 import it.acubelab.smaph.linkback.LinkBack;

@@ -16,9 +16,9 @@
 
 package it.acubelab.smaph.main;
 
-import it.acubelab.batframework.data.*;
-import it.acubelab.batframework.problems.A2WDataset;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.data.*;
+import it.unipi.di.acube.batframework.problems.A2WDataset;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotatorDebugger;
 import it.cnr.isti.hpc.erd.WikipediaToFreebase;
 

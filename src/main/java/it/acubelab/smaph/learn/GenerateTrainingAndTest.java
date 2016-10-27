@@ -16,14 +16,14 @@
 
 package it.acubelab.smaph.learn;
 
-import it.acubelab.batframework.data.Tag;
-import it.acubelab.batframework.datasetPlugins.ERD2014Dataset;
-import it.acubelab.batframework.datasetPlugins.SMAPHDataset;
-import it.acubelab.batframework.datasetPlugins.YahooWebscopeL24Dataset;
-import it.acubelab.batframework.problems.C2WDataset;
-import it.acubelab.batframework.systemPlugins.WATAnnotator;
-import it.acubelab.batframework.utils.FreebaseApi;
-import it.acubelab.batframework.utils.WikipediaApiInterface;
+import it.unipi.di.acube.batframework.data.Tag;
+import it.unipi.di.acube.batframework.datasetPlugins.ERD2014Dataset;
+import it.unipi.di.acube.batframework.datasetPlugins.SMAPHDataset;
+import it.unipi.di.acube.batframework.datasetPlugins.YahooWebscopeL24Dataset;
+import it.unipi.di.acube.batframework.problems.C2WDataset;
+import it.unipi.di.acube.batframework.systemPlugins.WATAnnotator;
+import it.unipi.di.acube.batframework.utils.FreebaseApi;
+import it.unipi.di.acube.batframework.utils.WikipediaApiInterface;
 import it.acubelab.smaph.SmaphAnnotator;
 import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
 import it.acubelab.smaph.boldfilters.FrequencyBoldFilter;

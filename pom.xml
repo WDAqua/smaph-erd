@@ -32,9 +32,9 @@
 		</dependency>
 					            
 		<dependency>
-			<groupId>it.acubelab.batframework</groupId>
+			<groupId>it.unipi.di.acube</groupId>
 			<artifactId>bat-framework</artifactId>
-			<version>0.1</version>
+			<version>1.3.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
@@ -181,11 +181,5 @@
 			</plugin>
 		</plugins>
 	</build>
-	<repositories>
-		<repository>
-			<id>dropbox</id>
-			<url>https://dl.dropboxusercontent.com/u/4663256/mvn-repository/</url>
-		</repository>
-	</repositories>
 </project>
 
