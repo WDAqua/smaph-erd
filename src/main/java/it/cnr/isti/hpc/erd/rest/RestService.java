@@ -25,7 +25,7 @@ import it.acubelab.smaph.SmaphConfig;
 import it.acubelab.smaph.boldfilters.EditDistanceBoldFilter;
 import it.acubelab.smaph.boldfilters.FrequencyBoldFilter;
 import it.acubelab.smaph.entityfilters.LibSvmEntityFilter;
-import it.acubelab.smaph.linkback.DummyLinkBack;
+import it.acubelab.smaph.linkback.BaselineLinkBack;
 import it.cnr.isti.hpc.erd.Annotation;
 import it.cnr.isti.hpc.erd.Annotator;
 
@@ -124,7 +124,7 @@ public class RestService {
 		try {
 			return new SmaphAnnotator(auxAnnotatorService,
 					new FrequencyBoldFilter(0.06f), new LibSvmEntityFilter(
-							modelBase), new DummyLinkBack(), true, true, true,
+							modelBase), new BaselineLinkBack(wikiApi), true, true, true,
 					10, false, -1, false, -1, wikiApi, bingKey);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -146,6 +146,8 @@ public class RestService {
 				String title = wikiApi.getTitlebyId(ann.getConcept());
 				if (wid >= 0 && title != null) {
 					JSONObject annJson = new JSONObject();
+					annJson.put("start", ann.getPosition());
+					annJson.put("length", ann.getLength());
 					annJson.put("wid", wid);
 					annJson.put("title", title);
 					annJson.put(
@@ -165,3 +167,4 @@ public class RestService {
 	}
 
 }
+
